@@ -1,0 +1,77 @@
+﻿@model List<RedConnect.ViewModels.DonorMapViewModel>
+
+@{
+    ViewData["Title"] = "Active Donors Map";
+}
+
+<h2>Active Donors Map</h2>
+
+<div id="map" style="height:500px; width:100%;"></div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGFA-UcwC7AvF2sCT3MHNCvqOu5tX51_M"></script>
+
+<script>
+
+    function initMap() {
+
+        var map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 8,
+            center: { lat: 6.9271, lng: 79.8612 } // Colombo default
+        });
+
+        var donors = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
+
+        console.log("Donors from server:", donors); // Debug
+
+        var bounds = new google.maps.LatLngBounds();
+
+        donors.forEach(function (donor) {
+
+            // Force numeric conversion
+            var lat = Number(donor.Lat);
+            var lng = Number(donor.Lng);
+
+            // Validate numbers before creating marker
+            if (!isNaN(lat) && !isNaN(lng)) {
+
+                var position = { lat: lat, lng: lng };
+
+                var marker = new google.maps.Marker({
+                    position: position,
+                    map: map
+                });
+
+                    var content =
+                    "<strong>Donor Name:</strong> " + donor.Name +
+                    "<br/><strong>Blood Group:</strong> " + donor.BloodGroup +
+                    "<br/><strong>Location:</strong> " +
+                    (donor.LocationText ? donor.LocationText : "N/A");
+                  
+
+                    if (donor.Concent) {
+                        content += "<br/><strong>Contact:</strong> " + donor.Phone;
+                    }
+
+                var infoWindow = new google.maps.InfoWindow({
+                    content:
+                       content
+                 });
+
+                marker.addListener("click", function () {
+                    infoWindow.open(map, marker);
+                });
+
+                bounds.extend(position);
+            }
+            else {
+                console.warn("Invalid coordinates for donor:", donor);
+            }
+        });
+
+        if (donors.length > 0) {
+            map.fitBounds(bounds);
+        }
+    }
+
+    window.onload = initMap;
+</script>

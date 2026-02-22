@@ -1,0 +1,102 @@
+@model RedConnect.ViewModels.UserViewModel
+
+<form asp-action="Edit" method="post">
+
+    <input type="hidden" asp-for="UserId" />
+    <input type="hidden" asp-for="UserTypeId" />
+
+    <label>Email</label>
+    <input asp-for="Email" class="form-control" />
+
+    <label>Active</label>
+    <input type="checkbox" asp-for="Active" />
+
+    <h4>Mongo Details</h4>
+
+    <label>Name</label>
+    <input asp-for="Name" class="form-control" />
+
+    <label>Address</label>
+    <input asp-for="Address" class="form-control" />
+
+    <label>Phone</label>
+    <input asp-for="Phone" class="form-control" />
+
+    <label>NIC</label>
+    <input asp-for="NIC" class="form-control" />
+
+    <div>
+        <label>Blood Group</label>
+        <select asp-for="BloodGroup" class="form-control">
+            <option value="">-- Select Blood Group --</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+        </select>
+    </div>
+  
+    <div>
+        <label>Search Location</label>
+        <input asp-for="LocationText"
+               id="locationSearch"
+               class="form-control"
+               placeholder="Type a location (e.g., Colombo, Sri Lanka)" />
+    </div>
+
+    <div>
+
+        <input asp-for="AvailableLat"
+               id="lat"
+               type="hidden"
+               step="any"
+               class="form-control" />
+    </div>
+
+    <div>
+      
+        <input asp-for="AvailableLng"
+               id="lng"
+               type="hidden"
+               step="any"
+               class="form-control" />
+    </div>
+
+    <label>I want to show my contact number on Map</label>
+    <input type="checkbox" asp-for="Concent" />
+
+    <button type="submit">Update</button>
+</form>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGFA-UcwC7AvF2sCT3MHNCvqOu5tX51_M&libraries=places"></script>
+<script>
+    function initAutocomplete() {
+        const input = document.getElementById("locationSearch");
+
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            types: ["geocode"],
+            componentRestrictions: { country: "lk" } // restrict to Sri Lanka
+        });
+
+        autocomplete.addListener("place_changed", function () {
+            const place = autocomplete.getPlace();
+
+            if (!place.geometry) {
+                alert("No details available for selected location");
+                return;
+            }
+
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+
+            document.getElementById("lat").value = lat;
+            document.getElementById("lng").value = lng;
+        });
+    }
+
+    window.onload = initAutocomplete;
+</script>
