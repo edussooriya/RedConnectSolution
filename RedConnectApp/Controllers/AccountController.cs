@@ -53,19 +53,19 @@ public class AccountController : Controller
 
     public async Task<IActionResult> Edit(int id)
     {
-        var sessionUserId = HttpContext.Session.GetInt32("UserId");
+        int? sessionUserId = HttpContext.Session.GetInt32("UserId");
 
         if (sessionUserId == null)
         {
             return RedirectToAction("Login");
         }
 
-        var sqlUser = await _repo.GetByIdAsync(id);
+        var sqlUser = await _repo.GetByIdAsync(sessionUserId.Value);
 
         if (sqlUser == null)
             return NotFound();
 
-        var mongoUser = await _repo.GetMongoUserAsync(id);
+        var mongoUser = await _repo.GetMongoUserAsync(sessionUserId.Value);
 
         var model = new UserViewModel
         {
