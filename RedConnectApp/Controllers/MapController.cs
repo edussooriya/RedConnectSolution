@@ -9,10 +9,10 @@ using RedConnect.ViewModels;
 namespace RedConnectApp.Controllers
 {
     
-    public class DonorController : Controller
+    public class MapController : Controller
     {
         private readonly DonorMapService _mapService;
-        public DonorController(DonorMapService mapService)
+        public MapController(DonorMapService mapService)
         {
             _mapService = mapService;
         }
@@ -21,7 +21,7 @@ namespace RedConnectApp.Controllers
             return View();
         }
 
-        public async Task<IActionResult> DonorMap()
+        public async Task<IActionResult> Donors()
         {
             var donors = await _mapService.GetActiveDonorsAsync();
             return View(donors);
