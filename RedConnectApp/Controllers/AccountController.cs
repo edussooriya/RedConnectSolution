@@ -46,12 +46,20 @@ public class AccountController : Controller
             ViewBag.Error = "Invalid credentials";
             return View();
         }
+        HttpContext.Session.SetInt32("UserId", user.UserId);
         return RedirectToAction("Edit", new { id = user.UserId });
        ;
     }
 
     public async Task<IActionResult> Edit(int id)
     {
+        var sessionUserId = HttpContext.Session.GetInt32("UserId");
+
+        if (sessionUserId == null)
+        {
+            return RedirectToAction("Login");
+        }
+
         var sqlUser = await _repo.GetByIdAsync(id);
 
         if (sqlUser == null)
@@ -104,4 +112,5 @@ public class AccountController : Controller
 
         return RedirectToAction("Edit", new { id = model.UserId });
     }
+
 }

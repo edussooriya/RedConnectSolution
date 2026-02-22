@@ -14,6 +14,7 @@ builder.Services.AddScoped<DonorMapService>();
 
 var app = builder.Build();
 
+app.UseSession();
 app.UseStaticFiles();
 app.UseRouting();
 
