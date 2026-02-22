@@ -17,5 +17,7 @@
         public string BloodGroup { get; set; }
 
         public string? LocationText { get; set; }
+
+        public bool Verified { get; set; }
     }
 }

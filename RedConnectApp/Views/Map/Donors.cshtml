@@ -14,6 +14,8 @@
 
     function initMap() {
 
+       
+
         var map = new google.maps.Map(document.getElementById("map"), {
             zoom: 8,
             center: { lat: 6.9271, lng: 79.8612 } // Colombo default
@@ -41,8 +43,14 @@
                     map: map
                 });
 
+                 var verifiedBadge = donor.Verified
+        ? `<span style="color:green;font-weight:bold;">✅ Verified</span>`
+        : `<span style="color:red;font-weight:bold;">❌ Not Verified</span>`;
+
+
                     var content =
                     "<strong>Donor Name:</strong> " + donor.Name +
+                    "<br/><strong>Status:</strong>"+ verifiedBadge +
                     "<br/><strong>Blood Group:</strong> " + donor.BloodGroup +
                     "<br/><strong>Location:</strong> " +
                     (donor.LocationText ? donor.LocationText : "N/A");
@@ -51,6 +59,8 @@
                     if (donor.Concent) {
                         content += "<br/><strong>Contact:</strong> " + donor.Phone;
                     }
+
+
 
                 var infoWindow = new google.maps.InfoWindow({
                     content:

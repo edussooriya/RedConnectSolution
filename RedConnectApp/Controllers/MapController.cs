@@ -6,7 +6,7 @@ using RedConnect.DAL;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 
-namespace RedConnectApp.Controllers
+namespace RedConnect.Controllers
 {
     
     public class MapController : Controller

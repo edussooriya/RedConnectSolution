@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using RedConnect.Models;
 using RedConnect.Data;
 
+
 namespace RedConnect.DAL;
 
 public class UserRepository
@@ -132,6 +133,30 @@ public class UserRepository
     {
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
         return await _mongoCollection.Find(filter).FirstOrDefaultAsync();
+    }
+
+    public async Task<List<MongoUser>> GetUnverifiedDonorsAsync()
+    {
+        var filter = Builders<MongoUser>.Filter.And(
+             Builders<MongoUser>.Filter.Eq(x => x.UserType, 0),
+             Builders<MongoUser>.Filter.Or(
+                 Builders<MongoUser>.Filter.Eq(x => x.Verified, false),
+                 Builders<MongoUser>.Filter.Exists("Verified", false)
+        ));
+
+        var users = await _mongoCollection.Find(filter).ToListAsync();
+        return users;
+    }
+
+    public async Task VerifyDonorAsync(int userId)
+    {
+        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
+
+        var update = Builders<MongoUser>.Update
+            .Set(x => x.Verified, true)
+            .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
+
+        await _mongoCollection.UpdateOneAsync(filter, update);
     }
 
 

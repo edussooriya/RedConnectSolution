@@ -22,6 +22,7 @@ public class MongoUser
     public bool Concent { get; set; }
 
     public string BloodGroup { get; set; }
+    public bool Verified { get; set; }
 }
 
 public class UserDetails
@@ -31,6 +32,8 @@ public class UserDetails
     public string NIC { get; set; }
 
     public string Phone { get; set; }
+
+   
 }
 
 public class GeoLocation

@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 
@@ -32,7 +33,8 @@ public class DonorMapService
                 Name = x.UserDetails.Name,
                 Phone = x.UserDetails.Phone,
                 Concent= x.Concent,
-                BloodGroup= x.BloodGroup,
+                BloodGroup= x.BloodGroup.IsNullOrEmpty() ? "N/A" : x.BloodGroup,
+               Verified= x.Verified,
             })
             .ToList();
     }
