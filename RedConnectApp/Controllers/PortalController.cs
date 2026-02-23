@@ -10,6 +10,10 @@ using RedConnectApp.DAL;
 
 namespace RedConnect.Controllers
 {
+    enum UserType 
+    { 
+        GeneralUser
+    }
     public class PortalController : Controller
     {
         private readonly MongoRepository _repo;
@@ -23,6 +27,7 @@ namespace RedConnect.Controllers
 
         public async Task<IActionResult> DonorList()
         {
+            
             var donors = await _repo.GetUnverifiedDonorsAsync();
 
             var donorList = donors.Select(x => new DonorListViewModel
@@ -55,7 +60,7 @@ namespace RedConnect.Controllers
             }
             else 
             {
-                await _repo.CreateBloodBankAsync(
+                await _repo.CreateOrUpdateBloodBankAsync(
                        model.LocationName,
                        model.Address,
                        model.StaffEmail,
@@ -79,5 +84,14 @@ namespace RedConnect.Controllers
 
             return View(vm);
         }
+
+        //private IActionResult CheckValidity()
+        //{
+        //    if (HttpContext.Session.GetInt32("UserTypeId") == (int)UserType.GeneralUser)
+        //    {
+        //        return RedirectToAction("RegisterBank");
+        //    }
+           
+        //}
     }
 }

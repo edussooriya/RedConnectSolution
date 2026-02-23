@@ -195,6 +195,82 @@ public class MongoRepository
         await _bloodBankCollection.InsertOneAsync(bloodBank);
     }
 
+    public async Task<BloodBankDetails?> GetBloodBankByLocationAsync(string locationName)
+    {
+        var filter = Builders<BloodBankDetails>.Filter
+            .Eq(x => x.LocationName, locationName);
+
+        return await _bloodBankCollection
+            .Find(filter)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task CreateOrUpdateBloodBankAsync(
+    string locationName,
+    string address,
+    string email,
+    string password,
+    int userTypeId)
+    {
+        // 🔹 1️⃣ Check if email exists in SQL
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(x => x.Email == email);
+
+        MsSqlUser user;
+
+        if (existingUser == null)
+        {
+            // Create new user
+            var hashed = BCrypt.Net.BCrypt.HashPassword(password);
+
+            user = new MsSqlUser
+            {
+                Email = email,
+                Password = hashed,
+                UserTypeId = userTypeId,
+                Active = true
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            user = existingUser;
+        }
+
+        // 🔹 2️⃣ Check if BloodBank location exists
+        var existingBank = await GetBloodBankByLocationAsync(locationName);
+
+        if (existingBank == null)
+        {
+            // Create new BloodBank document
+            var bloodBank = new BloodBankDetails
+            {
+                LocationName = locationName,
+                Address = address,
+                UserIds = new List<int> { user.UserId },
+                CreatedOn = DateTime.UtcNow
+            };
+
+            await _bloodBankCollection.InsertOneAsync(bloodBank);
+        }
+        else
+        {
+            // 🔹 Add userId only if not already inside array
+            if (!existingBank.UserIds.Contains(user.UserId))
+            {
+                var filter = Builders<BloodBankDetails>.Filter
+                    .Eq(x => x.LocationName, locationName);
+
+                var update = Builders<BloodBankDetails>.Update
+                    .AddToSet(x => x.UserIds, user.UserId);
+
+                await _bloodBankCollection.UpdateOneAsync(filter, update);
+            }
+        }
+    }
+
     public async Task<bool> EmailExistsAsync(string email)
     {
         return await _context.Users

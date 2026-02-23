@@ -47,6 +47,8 @@ public class AccountController : Controller
             return View();
         }
         HttpContext.Session.SetInt32("UserId", user.UserId);
+        HttpContext.Session.SetInt32("UserTypeId", user.UserTypeId);
+
         return RedirectToAction("Edit", new { id = user.UserId });
        ;
     }
