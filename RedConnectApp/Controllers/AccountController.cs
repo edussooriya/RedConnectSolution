@@ -9,9 +9,9 @@ namespace RedConnect.Controllers;
 
 public class AccountController : Controller
 {
-    private readonly UserRepository _repo;
+    private readonly MongoRepository _repo;
 
-    public AccountController(UserRepository repo)
+    public AccountController(MongoRepository repo)
     {
         _repo = repo;
     }

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using RedConnect.Data;
 using RedConnect.DAL;
+using RedConnectApp.DAL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,10 +15,10 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContext<MSSQLDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MsSql")));
 
-builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<MongoRepository>();
 builder.Services.AddScoped<DonorMapService>();
 
 var app = builder.Build();

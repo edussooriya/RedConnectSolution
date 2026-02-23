@@ -1,22 +1,25 @@
 ﻿using BCrypt.Net;
+using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using RedConnect.Models;
-using RedConnect.Data;
+using RedConnectApp.DAL;
 
 
 namespace RedConnect.DAL;
 
-public class UserRepository
+public class MongoRepository
 {
-    private readonly AppDbContext _context;
+    private readonly MSSQLDBContext _context;
     private readonly IMongoCollection<MongoUser> _mongoCollection;
-
-    public UserRepository(AppDbContext context, IConfiguration config)
+    private readonly IMongoCollection<BloodBankDetails> _bloodBankCollection;
+    public MongoRepository(MSSQLDBContext context, IConfiguration config)
     {
         _context = context;
         var client = new MongoClient(config["Mongo:Connection"]);
         var db = client.GetDatabase(config["Mongo:Database"]);
         _mongoCollection = db.GetCollection<MongoUser>("Users");
+        _bloodBankCollection = db.GetCollection<BloodBankDetails>("BloodBankDetails");
+
     }
 
     public async Task RegisterAsync(int userTypeId, string email, string password,
@@ -157,6 +160,45 @@ public class UserRepository
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
 
         await _mongoCollection.UpdateOneAsync(filter, update);
+    }
+
+    public async Task CreateBloodBankAsync(
+    string locationName,
+    string address,
+    string email,
+    string password,
+    int userTypeId)
+    {
+        // 🔹 1. Create User in MSSQL
+        var hashed = BCrypt.Net.BCrypt.HashPassword(password);
+
+        var user = new MsSqlUser
+        {
+            Email = email,
+            Password = hashed,
+            UserTypeId = userTypeId,
+            Active = true
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // 🔹 2. Create BloodBank document in Mongo
+        var bloodBank = new BloodBankDetails
+        {
+            LocationName = locationName,
+            Address = address,
+            UserIds = new List<int> { user.UserId },
+            CreatedOn = DateTime.UtcNow
+        };
+
+        await _bloodBankCollection.InsertOneAsync(bloodBank);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email)
+    {
+        return await _context.Users
+            .AnyAsync(u => u.Email == email);
     }
 
 

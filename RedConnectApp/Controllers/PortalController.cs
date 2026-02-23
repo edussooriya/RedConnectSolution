@@ -1,19 +1,24 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Scaffolding;
 using RedConnect.DAL;
 using RedConnect.Models;
 using RedConnect.ViewModels;
+using RedConnectApp.DAL;
 
 
 namespace RedConnect.Controllers
 {
     public class PortalController : Controller
     {
-        private readonly UserRepository _repo;
-        public PortalController(UserRepository repo)
+        private readonly MongoRepository _repo;
+        private readonly MSSQLDBContext _context;
+
+        public PortalController(MongoRepository repo, MSSQLDBContext context)
         {
             _repo = repo;
+            _context = context;
         }
 
         public async Task<IActionResult> DonorList()
@@ -37,6 +42,42 @@ namespace RedConnect.Controllers
         {
             await _repo.VerifyDonorAsync(userId);
             return RedirectToAction("DonorList");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RegisterBank(BloodBankViewModel model)
+        {
+            if (await _repo.EmailExistsAsync(model.StaffEmail))
+            {
+                ModelState.AddModelError("StaffEmail", "Email already exists.");
+                model.UserTypes = _context.UserType.ToList();
+                return View(model);
+            }
+            else 
+            {
+                await _repo.CreateBloodBankAsync(
+                       model.LocationName,
+                       model.Address,
+                       model.StaffEmail,
+                       model.Password,
+                       model.SelectedUserTypeId
+                   );
+
+                return RedirectToAction("RegisterBank");
+            }
+
+               
+        }
+
+        public IActionResult RegisterBank()
+        {
+         
+            var vm = new BloodBankViewModel
+            {
+                UserTypes = _context.UserType.ToList()
+            };
+
+            return View(vm);
         }
     }
 }
