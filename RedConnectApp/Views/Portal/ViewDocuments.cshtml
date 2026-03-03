@@ -1,0 +1,228 @@
+@model List<RedConnect.Models.MedicalReport>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Review Documents";
+    var donorName = ViewBag.DonorName as string;
+    var userId    = (int)ViewBag.UserId;
+    var verified  = (bool)ViewBag.Verified;
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-file-medical" style="color:var(--rc-red);"></i> Medical Documents</h1>
+    <p>Review documents submitted by <strong>@donorName</strong></p>
+</div>
+
+<!-- Page header card -->
+<div class="rc-card mb-4">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-user-circle" style="color:var(--rc-red);"></i> @donorName</h3>
+        <div class="d-flex gap-2 align-items-center">
+            @if (verified)
+            {
+                <span class="rc-badge rc-badge--verified">
+                    <i class="fas fa-circle-check"></i> Account Verified
+                </span>
+            }
+            else
+            {
+                <span class="rc-badge rc-badge--pending">
+                    <i class="fas fa-clock"></i> Pending Verification
+                </span>
+            }
+            <a href="/Portal/DonorList" class="rc-btn rc-btn--outline rc-btn--sm">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="rc-card__body">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="rc-alert rc-alert--success mb-3">
+                <i class="fas fa-check-circle"></i> @TempData["Success"]
+            </div>
+        }
+
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="rc-alert" style="background:#f8d7da;border-color:#f5c2c7;color:#842029;">
+                <i class="fas fa-exclamation-triangle"></i>
+                No documents uploaded yet for this donor.
+            </div>
+        }
+        else
+        {
+            <!-- Document cards -->
+            <div class="row g-4 mb-4">
+                @foreach (var doc in Model)
+                {
+                    var isPdf      = doc.FilePath?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false;
+                    var isApproved = doc.Status == "Approved";
+                    var isRejected = doc.Status == "Rejected";
+
+                    var borderColor = isApproved ? "#198754" : isRejected ? "#dc3545" : "#dee2e6";
+                    var headerBg    = isApproved ? "#d1e7dd" : isRejected ? "#f8d7da" : "var(--rc-gray-100)";
+                    var headerColor = isApproved ? "#0a3622" : isRejected ? "#58151c" : "var(--rc-gray-600)";
+
+                    <div class="col-md-4">
+                        <div style="border:2px solid @borderColor;border-radius:0.75rem;overflow:hidden;">
+
+                            <!-- Doc header -->
+                            <div style="background:@headerBg;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:@headerColor;">
+                                    <i class="fas fa-file-medical"></i> @doc.Label
+                                </span>
+                                @if (isApproved)
+                                {
+                                    <span class="rc-badge rc-badge--verified" style="font-size:0.7rem;">
+                                        <i class="fas fa-check"></i> Approved
+                                    </span>
+                                }
+                                else if (isRejected)
+                                {
+                                    <span class="rc-badge" style="background:#dc3545;color:white;font-size:0.7rem;">
+                                        <i class="fas fa-times"></i> Rejected
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="rc-badge rc-badge--pending" style="font-size:0.7rem;">
+                                        <i class="fas fa-clock"></i> Pending
+                                    </span>
+                                }
+                            </div>
+
+                            <!-- Doc preview -->
+                            <div style="padding:1rem;text-align:center;background:white;min-height:160px;display:flex;align-items:center;justify-content:center;">
+                                @if (string.IsNullOrEmpty(doc.FilePath))
+                                {
+                                    <span style="color:var(--rc-gray-400);font-size:0.85rem;">No file</span>
+                                }
+                                else if (isPdf)
+                                {
+                                    <div>
+                                        <i class="fas fa-file-pdf" style="font-size:3rem;color:#dc3545;"></i>
+                                        <p style="margin:0.4rem 0 0;font-size:0.8rem;color:var(--rc-gray-600);">PDF Document</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <img src="@doc.FilePath" style="max-width:100%;max-height:160px;border-radius:0.4rem;object-fit:contain;" alt="@doc.Label" />
+                                }
+                            </div>
+
+                            <!-- Rejection reason display -->
+                            @if (isRejected && !string.IsNullOrEmpty(doc.RejectedReason))
+                            {
+                                <div style="padding:0.6rem 1rem;background:#fff3cd;border-top:1px solid #ffc107;">
+                                    <span style="font-size:0.78rem;color:#664d03;">
+                                        <i class="fas fa-comment-dots"></i> <strong>Reason:</strong> @doc.RejectedReason
+                                    </span>
+                                </div>
+                            }
+
+                            <!-- View / Download links -->
+                            @if (!string.IsNullOrEmpty(doc.FilePath))
+                            {
+                                <div style="padding:0.6rem 1rem;border-top:1px solid var(--rc-gray-200);display:flex;gap:0.5rem;justify-content:center;background:var(--rc-gray-50);">
+                                    <a href="@doc.FilePath" target="_blank" class="rc-btn rc-btn--outline rc-btn--sm">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="@doc.FilePath" download class="rc-btn rc-btn--outline rc-btn--sm">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            }
+
+                            <!-- Approve / Reject actions -->
+                            <div style="padding:0.75rem 1rem;border-top:1px solid var(--rc-gray-200);background:white;">
+                                @if (!isApproved)
+                                {
+                                    <form asp-controller="Portal" asp-action="ApproveDocument" method="post"
+                                          style="display:inline;"
+                                          onsubmit="return confirm('Approve this document?')">
+                                        <input type="hidden" name="userId"   value="@userId" />
+                                        <input type="hidden" name="docIndex" value="@doc.Index" />
+                                        <button type="submit" class="rc-btn rc-btn--sm"
+                                                style="background:#198754;color:white;width:100%;margin-bottom:0.5rem;">
+                                            <i class="fas fa-circle-check"></i> Approve
+                                        </button>
+                                    </form>
+                                }
+
+                                @if (!isRejected)
+                                {
+                                    <button type="button" class="rc-btn rc-btn--sm"
+                                            style="background:#dc3545;color:white;width:100%;"
+                                            onclick="rcToggleRejectForm(@doc.Index)">
+                                        <i class="fas fa-circle-xmark"></i> Reject
+                                    </button>
+                                    <div id="rejectForm_@doc.Index" style="display:none;margin-top:0.5rem;">
+                                        <form asp-controller="Portal" asp-action="RejectDocument" method="post">
+                                            <input type="hidden" name="userId"   value="@userId" />
+                                            <input type="hidden" name="docIndex" value="@doc.Index" />
+                                            <textarea name="reason" class="rc-input"
+                                                      rows="2" style="font-size:0.8rem;margin-bottom:0.4rem;"
+                                                      placeholder="Reason for rejection (required)..." required></textarea>
+                                            <div class="d-flex gap-1">
+                                                <button type="submit" class="rc-btn rc-btn--sm"
+                                                        style="background:#dc3545;color:white;flex:1;">
+                                                    <i class="fas fa-paper-plane"></i> Send Rejection
+                                                </button>
+                                                <button type="button" class="rc-btn rc-btn--outline rc-btn--sm"
+                                                        onclick="rcToggleRejectForm(@doc.Index)">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Portal" asp-action="ApproveDocument" method="post"
+                                          onsubmit="return confirm('Un-reject and approve this document?')">
+                                        <input type="hidden" name="userId"   value="@userId" />
+                                        <input type="hidden" name="docIndex" value="@doc.Index" />
+                                        <button type="submit" class="rc-btn rc-btn--sm rc-btn--outline"
+                                                style="width:100%;margin-top:0;">
+                                            <i class="fas fa-rotate-left"></i> Un-reject
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Verify account section -->
+            @if (!verified)
+            {
+                <div style="border-top:1px solid var(--rc-gray-200);padding-top:1.5rem;">
+                    <p style="font-size:0.875rem;color:var(--rc-gray-600);margin-bottom:1rem;">
+                        <i class="fas fa-circle-info" style="color:var(--rc-red);"></i>
+                        Review all documents above before verifying the donor account.
+                        Approving/rejecting individual documents notifies the donor automatically.
+                    </p>
+                    <form asp-action="Verify" asp-controller="Portal" method="post" style="display:inline;"
+                          onsubmit="return confirm('Verify this donor account? They will gain full platform access.')">
+                        <input type="hidden" name="userId" value="@userId" />
+                        <button type="submit" class="rc-btn rc-btn--primary">
+                            <i class="fas fa-circle-check"></i> Verify Donor Account
+                        </button>
+                    </form>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function rcToggleRejectForm(idx) {
+    var el = document.getElementById('rejectForm_' + idx);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+}

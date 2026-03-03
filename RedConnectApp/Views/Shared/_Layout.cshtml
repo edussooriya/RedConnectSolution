@@ -1,0 +1,110 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+@{
+    var ctrl   = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
+    var action = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
+
+    Func<string, string, string> navClass = (c, a) =>
+        ctrl == c.ToLower() && (a == "*" || action == a.ToLower()) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — Red Connect" : "Red Connect")</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="~/css/site.css" rel="stylesheet">
+</head>
+<body>
+    <div class="rc-app">
+
+        <!-- Sidebar -->
+        <nav class="rc-sidebar">
+            <div class="rc-sidebar__brand">
+                <i class="fas fa-heart-pulse rc-animate-pulse"></i>
+                <span>Red Connect</span>
+            </div>
+
+            <div class="rc-sidebar__nav">
+                <div class="rc-nav-section">General</div>
+
+                <a href="/Dashboard" class="rc-nav-link @navClass("Dashboard","Index")">
+                    <i class="fas fa-gauge-high"></i> Dashboard
+                </a>
+                <a href="/Account/Edit?id=@Context.Session.GetInt32("UserId")"
+                   class="rc-nav-link @navClass("Account","Edit")">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </a>
+                <a href="/Map/Donors" class="rc-nav-link @navClass("Map","Donors")">
+                    <i class="fas fa-map-marked-alt"></i> Donor Map
+                </a>
+                <a href="/Account/ChangePassword" class="rc-nav-link @navClass("Account","ChangePassword")">
+                    <i class="fas fa-lock"></i> Change Password
+                </a>
+
+                @{
+                    var userTypeId = Context.Session.GetInt32("UserTypeId");
+                }
+                @if (userTypeId != null && userTypeId != 0)
+                {
+                    <div class="rc-nav-section">Admin</div>
+                    <a href="/Admin/UserList" class="rc-nav-link @navClass("Admin","UserList")">
+                        <i class="fas fa-users-cog"></i> User Management
+                    </a>
+                    <a href="/Admin/CreateUser" class="rc-nav-link @navClass("Admin","CreateUser")">
+                        <i class="fas fa-user-plus"></i> Create User
+                    </a>
+                    <a href="/Portal/DonorList" class="rc-nav-link @navClass("Portal","DonorList")">
+                        <i class="fas fa-list-check"></i> Donor List
+                    </a>
+                    <a href="/Portal/BankList" class="rc-nav-link @navClass("Portal","BankList")">
+                        <i class="fas fa-hospital"></i> Blood Banks
+                    </a>
+                    <a href="/Portal/RegisterBank" class="rc-nav-link @navClass("Portal","RegisterBank")">
+                        <i class="fas fa-plus-circle"></i> Register Bank
+                    </a>
+                }
+            </div>
+
+            <div class="rc-sidebar__footer">
+                <a href="/Account/Logout" class="rc-btn rc-btn--logout w-100 justify-content-center">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <div class="rc-main">
+            <header class="rc-topbar">
+                <span class="rc-topbar__title">@(ViewData["Title"] ?? "Dashboard")</span>
+                <div class="rc-topbar__user">
+                    <div class="rc-user-badge">
+                        <i class="fas fa-user" style="font-size:0.8rem;"></i>
+                    </div>
+                    <span style="font-size:0.82rem; color:var(--rc-gray-700);">
+                        @if (Context.Session.GetInt32("UserId") != null)
+                        {
+                            <text>User #@Context.Session.GetInt32("UserId")</text>
+                        }
+                    </span>
+                </div>
+            </header>
+
+            <main class="rc-content">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="rc-alert rc-alert--success mb-3">
+                        <i class="fas fa-check-circle"></i> @TempData["Success"]
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

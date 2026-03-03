@@ -1,12 +1,102 @@
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign In";
+}
+
+@section Brand {
+    <div class="rc-brand-panel">
+        <i class="fas fa-heart-pulse rc-brand-icon"></i>
+        <div class="rc-brand-title">Red Connect</div>
+        <div class="rc-brand-tagline">Save Lives Together</div>
+        <p class="rc-brand-desc">
+            Join our community of heroes who donate blood and save lives every day.
+        </p>
+        <div class="rc-brand-stats">
+            <div>
+                <div class="rc-stat__value">10K+</div>
+                <div class="rc-stat__label">Lives Saved</div>
+            </div>
+            <div>
+                <div class="rc-stat__value">@ViewBag.ActiveDonors</div>
+                <div class="rc-stat__label">Active Donors</div>
+            </div>
+            <div>
+                <div class="rc-stat__value">@ViewBag.TotalBanks</div>
+                <div class="rc-stat__label">Blood Banks</div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="rc-form-header">
+    <h2>Welcome Back</h2>
+    <p>Sign in to your account to continue</p>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <div class="rc-alert rc-alert--error">
+        <i class="fas fa-exclamation-circle"></i> @ViewBag.Error
+    </div>
+}
+@if (ViewBag.Message != null)
+{
+    <div class="rc-alert rc-alert--success">
+        <i class="fas fa-check-circle"></i> @ViewBag.Message
+    </div>
+}
+
 <form method="post">
-    <input name="email" placeholder="Email" />
-    <input name="password" type="password" placeholder="Password" />
-    <button type="submit">Login</button>
+    <div class="mb-3">
+        <label class="rc-form-label">
+            <i class="fas fa-envelope"></i> Email Address
+        </label>
+        <input type="email" class="rc-input" name="email" placeholder="Enter your email" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="rc-form-label">
+            <i class="fas fa-lock"></i> Password
+        </label>
+        <div class="rc-input-wrap">
+            <input type="password" class="rc-input" id="loginPwd" name="password"
+                   placeholder="Enter your password" required style="padding-right:3rem;">
+            <span class="rc-pwd-toggle" onclick="rcTogglePwd('loginPwd','loginPwdIcon')">
+                <i class="fas fa-eye" id="loginPwdIcon"></i>
+            </span>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="remember">
+            <label class="form-check-label text-muted" for="remember" style="font-size:0.875rem;">
+                Remember me
+            </label>
+        </div>
+        <a href="#" class="rc-link" style="font-size:0.875rem;">Forgot Password?</a>
+    </div>
+
+    <button type="submit" class="rc-btn rc-btn--primary rc-btn--full">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+    </button>
 </form>
 
-@if(ViewBag.Error != null){
-    <p style="color:red;">@ViewBag.Error</p>
+<div class="text-center mt-4">
+    <p class="text-muted" style="font-size:0.9rem;">
+        Don't have an account? <a href="/Account/Register" class="rc-link">Create Account</a>
+    </p>
+</div>
+
+@section Scripts {
+<script>
+function rcTogglePwd(inputId, iconId) {
+    const inp = document.getElementById(inputId);
+    const ico = document.getElementById(iconId);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    ico.classList.toggle('fa-eye', !isPass);
+    ico.classList.toggle('fa-eye-slash', isPass);
 }
-@if(ViewBag.Message != null){
-    <p style="color:green;">@ViewBag.Message</p>
+</script>
 }

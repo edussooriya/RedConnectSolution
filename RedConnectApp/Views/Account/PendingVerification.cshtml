@@ -1,0 +1,222 @@
+@model List<RedConnect.Models.MedicalReport>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Pending Verification";
+    var hasRejected = Model?.Any(r => r.Status == "Rejected") ?? false;
+}
+
+<div class="rc-page-header">
+    <h1>
+        @if (hasRejected)
+        {
+            <i class="fas fa-triangle-exclamation" style="color:#dc3545;"></i>
+            <text> Documents Require Attention</text>
+        }
+        else
+        {
+            <i class="fas fa-hourglass-half" style="color:#e8a020;"></i>
+            <text> Pending Verification</text>
+        }
+    </h1>
+    <p>
+        @if (hasRejected)
+        {
+            <text>Some documents were rejected — please re-upload them below</text>
+        }
+        else
+        {
+            <text>Your documents have been received and are under review</text>
+        }
+    </p>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="rc-alert rc-alert--success mb-3" style="max-width:680px;">
+        <i class="fas fa-check-circle"></i> @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="rc-alert rc-alert--error mb-3" style="max-width:680px;">
+        <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+    </div>
+}
+
+<!-- Status summary card -->
+<div class="rc-card mb-4" style="max-width:680px;">
+    <div class="rc-card__body" style="padding:1.5rem 2rem;">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div style="width:4rem;height:4rem;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                        background:@(hasRejected ? "#f8d7da" : "#fff3cd");">
+                <i class="fas @(hasRejected ? "fa-file-circle-xmark" : "fa-shield-halved")"
+                   style="font-size:1.6rem;color:@(hasRejected ? "#dc3545" : "#e8a020");"></i>
+            </div>
+            <div style="flex:1;">
+                <h5 style="margin:0 0 0.25rem;">
+                    @if (hasRejected)
+                    {
+                        <text>Action Required</text>
+                    }
+                    else
+                    {
+                        <text>Under Admin Review</text>
+                    }
+                </h5>
+                <p class="text-muted" style="margin:0;font-size:0.875rem;">
+                    @if (hasRejected)
+                    {
+                        <text>One or more documents were rejected. Re-upload the highlighted documents to continue.</text>
+                    }
+                    else
+                    {
+                        <text>Our team is reviewing your documents. Refresh this page to check for updates.</text>
+                    }
+                </p>
+            </div>
+        </div>
+        @if (Model != null && Model.Count > 0)
+        {
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                @{
+                    var approved = Model.Count(r => r.Status == "Approved");
+                    var rejected = Model.Count(r => r.Status == "Rejected");
+                    var pending  = Model.Count(r => r.Status == "Pending");
+                }
+                @if (approved > 0)
+                {
+                    <span class="rc-badge rc-badge--verified">
+                        <i class="fas fa-check"></i> @approved Approved
+                    </span>
+                }
+                @if (rejected > 0)
+                {
+                    <span class="rc-badge" style="background:#f8d7da;color:#842029;">
+                        <i class="fas fa-times"></i> @rejected Rejected
+                    </span>
+                }
+                @if (pending > 0)
+                {
+                    <span class="rc-badge rc-badge--pending">
+                        <i class="fas fa-clock"></i> @pending Pending review
+                    </span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Document cards -->
+@if (Model != null && Model.Count > 0)
+{
+    <div class="rc-card" style="max-width:680px;">
+        <div class="rc-card__header">
+            <h3><i class="fas fa-folder-open" style="color:var(--rc-red);"></i> Your Documents</h3>
+        </div>
+        <div class="rc-card__body">
+            <div class="d-flex flex-column gap-3">
+                @foreach (var doc in Model)
+                {
+                    var isPdf      = doc.FilePath?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false;
+                    var isApproved = doc.Status == "Approved";
+                    var isRejected = doc.Status == "Rejected";
+
+                    var borderColor = isApproved ? "#198754" : isRejected ? "#dc3545" : "#dee2e6";
+                    var bgColor     = isApproved ? "#f0fff4" : isRejected ? "#fff5f5" : "var(--rc-gray-50)";
+
+                    <div style="border:1.5px solid @borderColor;border-radius:0.75rem;overflow:hidden;background:white;">
+                        <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem 1rem;background:@bgColor;flex-wrap:wrap;">
+
+                            <!-- Thumbnail -->
+                            <div style="width:56px;height:56px;border-radius:0.4rem;overflow:hidden;
+                                        background:white;border:1px solid var(--rc-gray-200);
+                                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                @if (string.IsNullOrEmpty(doc.FilePath))
+                                {
+                                    <i class="fas fa-file" style="color:var(--rc-gray-400);font-size:1.4rem;"></i>
+                                }
+                                else if (isPdf)
+                                {
+                                    <i class="fas fa-file-pdf" style="color:#dc3545;font-size:1.4rem;"></i>
+                                }
+                                else
+                                {
+                                    <img src="@doc.FilePath" style="width:100%;height:100%;object-fit:cover;" alt="doc" />
+                                }
+                            </div>
+
+                            <!-- Info -->
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;font-size:0.875rem;margin-bottom:0.2rem;">@doc.Label</div>
+                                @if (isApproved)
+                                {
+                                    <span class="rc-badge rc-badge--verified" style="font-size:0.75rem;">
+                                        <i class="fas fa-check"></i> Approved
+                                    </span>
+                                }
+                                else if (isRejected)
+                                {
+                                    <span class="rc-badge" style="background:#f8d7da;color:#842029;font-size:0.75rem;">
+                                        <i class="fas fa-times"></i> Rejected
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(doc.RejectedReason))
+                                    {
+                                        <div style="font-size:0.78rem;color:#842029;margin-top:0.3rem;">
+                                            <i class="fas fa-comment-dots"></i> <em>@doc.RejectedReason</em>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="rc-badge rc-badge--pending" style="font-size:0.75rem;">
+                                        <i class="fas fa-clock"></i> Under review
+                                    </span>
+                                }
+                            </div>
+
+                            <!-- View link -->
+                            @if (!string.IsNullOrEmpty(doc.FilePath))
+                            {
+                                <a href="@doc.FilePath" target="_blank"
+                                   class="rc-btn rc-btn--outline rc-btn--sm" style="flex-shrink:0;">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            }
+                        </div>
+
+                        <!-- Re-upload section (only for rejected docs) -->
+                        @if (isRejected)
+                        {
+                            <div style="padding:0.75rem 1rem;border-top:1px solid #f5c2c7;background:#fff8f8;">
+                                <p style="font-size:0.8rem;color:#842029;margin-bottom:0.5rem;font-weight:600;">
+                                    <i class="fas fa-upload"></i> Re-upload this document
+                                </p>
+                                <form asp-controller="Account" asp-action="ReuploadDocument"
+                                      method="post" enctype="multipart/form-data"
+                                      class="d-flex align-items-center gap-2 flex-wrap">
+                                    <input type="hidden" name="docIndex" value="@doc.Index" />
+                                    <input type="file" name="file"
+                                           accept=".pdf,.jpg,.jpeg,.png"
+                                           class="rc-input" style="flex:1;min-width:180px;font-size:0.8rem;" required />
+                                    <button type="submit" class="rc-btn rc-btn--sm"
+                                            style="background:#dc3545;color:white;flex-shrink:0;">
+                                        <i class="fas fa-cloud-arrow-up"></i> Re-upload
+                                    </button>
+                                </form>
+                                <p style="font-size:0.75rem;color:var(--rc-gray-500);margin-top:0.35rem;">
+                                    Accepted: PDF, JPG, PNG
+                                </p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="mt-3" style="max-width:680px;">
+    <a href="/Account/Logout" class="rc-btn rc-btn--outline rc-btn--sm">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+    </a>
+</div>

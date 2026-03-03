@@ -1,0 +1,105 @@
+@model RedConnect.ViewModels.UserViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Edit User";
+    var userTypes = ViewBag.UserTypes as List<RedConnect.Models.UserType> ?? new();
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-user-pen" style="color:var(--rc-red);"></i> Edit User #@Model.UserId</h1>
+    <p>Update account details and permissions</p>
+</div>
+
+<div class="rc-card">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-id-card" style="color:var(--rc-red);"></i> @(Model.Name ?? Model.Email)</h3>
+        <a href="/Admin/UserList" class="rc-btn rc-btn--outline rc-btn--sm">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+    <div class="rc-card__body">
+        <form asp-action="EditUser" asp-controller="Admin" method="post">
+            <input type="hidden" asp-for="UserId" />
+            <input type="hidden" asp-for="DonatedLat" />
+            <input type="hidden" asp-for="DonatedLng" />
+            <input type="hidden" asp-for="AvailableLat" />
+            <input type="hidden" asp-for="AvailableLng" />
+            <input type="hidden" asp-for="LocationText" />
+            <input type="hidden" asp-for="Concent" />
+
+            <!-- Account Settings -->
+            <p class="text-muted mb-3" style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">
+                Account Settings
+            </p>
+            <div class="row g-3 mb-4">
+                <div class="col-md-5">
+                    <label class="rc-form-label"><i class="fas fa-envelope"></i> Email</label>
+                    <input asp-for="Email" type="email" class="rc-input" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="rc-form-label"><i class="fas fa-user-tag"></i> User Type</label>
+                    <select asp-for="UserTypeId" class="rc-select">
+                        <option value="0">Donor</option>
+                        @foreach (var t in userTypes)
+                        {
+                            <option value="@t.UserTypeId">@t.UserTypeName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="rc-form-label"><i class="fas fa-toggle-on"></i> Account Status</label>
+                    <div class="d-flex align-items-center gap-2" style="height:42px;">
+                        <div class="form-check form-switch mb-0">
+                            <input asp-for="Active" type="checkbox" class="form-check-input"
+                                   role="switch" id="activeToggle" style="width:2.5rem; height:1.3rem; cursor:pointer;">
+                            <label class="form-check-label text-muted" for="activeToggle"
+                                   style="font-size:0.875rem; line-height:1.3rem;">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border-color:var(--rc-gray-200); margin:1.5rem 0;">
+
+            <!-- Profile Details -->
+            <p class="text-muted mb-3" style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">
+                Profile Details
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-user"></i> Full Name</label>
+                    <input asp-for="Name" class="rc-input" placeholder="Full name" />
+                </div>
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-phone"></i> Phone</label>
+                    <input asp-for="Phone" class="rc-input" placeholder="Phone number" />
+                </div>
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-id-card"></i> NIC</label>
+                    <input asp-for="NIC" class="rc-input" placeholder="National ID" />
+                </div>
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-tint"></i> Blood Group</label>
+                    <select asp-for="BloodGroup" class="rc-select">
+                        <option value="">— Not Set —</option>
+                        @foreach (var bg in new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" })
+                        {
+                            <option value="@bg">@bg</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-map-marker-alt"></i> Address</label>
+                    <input asp-for="Address" class="rc-input" placeholder="Full address" />
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="rc-btn rc-btn--primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <a href="/Admin/UserList" class="rc-btn rc-btn--outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

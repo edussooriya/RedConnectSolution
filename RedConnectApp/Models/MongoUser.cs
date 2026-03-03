@@ -1,6 +1,7 @@
 using System;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using RedConnectApp.Enums;
 
 namespace RedConnect.Models;
 
@@ -23,6 +24,17 @@ public class MongoUser
 
     public string BloodGroup { get; set; }
     public bool Verified { get; set; }
+    public bool DocumentsUploaded { get; set; }
+    public List<MedicalReport> MedicalReports { get; set; } = new();
+}
+
+public class MedicalReport
+{
+    public int    Index          { get; set; }
+    public string Label          { get; set; }
+    public string FilePath       { get; set; }
+    public string Status         { get; set; } = "Pending"; // Pending | Approved | Rejected
+    public string RejectedReason { get; set; }
 }
 
 public class UserDetails
@@ -30,10 +42,8 @@ public class UserDetails
     public string Name { get; set; }
     public string Address { get; set; }
     public string NIC { get; set; }
-
     public string Phone { get; set; }
-
-   
+    public GenderEnum Gender { get; set; }
 }
 
 public class GeoLocation

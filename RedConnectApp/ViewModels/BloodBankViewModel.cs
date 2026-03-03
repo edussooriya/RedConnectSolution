@@ -6,6 +6,9 @@ namespace RedConnect.ViewModels
     {
         public string LocationName { get; set; }
         public string Address { get; set; }
+        public string LocationSearch { get; set; }
+        public double Lat { get; set; }
+        public double Lng { get; set; }
 
         public string StaffEmail { get; set; }
         public string Password { get; set; }

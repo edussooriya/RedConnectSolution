@@ -1,52 +1,116 @@
-﻿@model List<RedConnect.ViewModels.DonorListViewModel>
+@model List<RedConnect.ViewModels.DonorListViewModel>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Donor Management";
+}
 
-<h2>Donor List (UserType = 0)</h2>
+<div class="rc-page-header">
+    <h1><i class="fas fa-list-check" style="color:var(--rc-red);"></i> Donor Management</h1>
+    <p>Review and verify registered blood donors</p>
+</div>
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>User ID</th>
-            <th>Name</th>
-            <th>Blood Group</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var donor in Model)
-        {
-            <tr>
-                <td>@donor.UserId</td>
-                <td>@donor.Name</td>
-                <td>@donor.BloodGroup</td>
-                <td>@donor.LocationText</td>
-                <td>
-                    @if (donor.Verified)
-                    {
-                        <span style="color:green;">✅ Verified</span>
-                    }
-                    else
-                    {
-                        <span style="color:red;">❌ Not Verified</span>
-                    }
-                </td>
-                <td>
-                    @if (!donor.Verified)
-                    {
-                        <form asp-action="Verify" method="post" asp-controller="Portal">
-                            <input type="hidden" name="userId" value="@donor.UserId" />
-                            <button type="submit" class="btn btn-success btn-sm">
-                                Verify
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <span>-</span>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="rc-card">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-users" style="color:var(--rc-red);"></i> Registered Donors</h3>
+        <span class="rc-badge rc-badge--blood">@Model.Count Total</span>
+    </div>
+    <div class="rc-table-wrap">
+        <table class="rc-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Blood Group</th>
+                    <th>Location</th>
+                    <th>Documents</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var donor in Model)
+                {
+                    <tr>
+                        <td style="color:var(--rc-gray-500); font-size:0.82rem;">@donor.UserId</td>
+                        <td><strong>@donor.Name</strong></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(donor.BloodGroup))
+                            {
+                                <span class="rc-badge rc-badge--blood">
+                                    <i class="fas fa-tint"></i> @donor.BloodGroup
+                                </span>
+                            }
+                        </td>
+                        <td style="font-size:0.875rem; color:var(--rc-gray-700);">
+                            <i class="fas fa-map-marker-alt" style="color:var(--rc-red); margin-right:0.3rem;"></i>
+                            @donor.LocationText
+                        </td>
+                        <td>
+                            @if (!donor.DocumentsUploaded)
+                            {
+                                <span class="rc-badge" style="background:#f8d7da;color:#842029;">
+                                    <i class="fas fa-file-circle-xmark"></i> Not uploaded
+                                </span>
+                            }
+                            else if (donor.RejectedCount > 0)
+                            {
+                                <span class="rc-badge" style="background:#fff3cd;color:#664d03;">
+                                    <i class="fas fa-triangle-exclamation"></i> @donor.RejectedCount rejected
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="rc-badge rc-badge--verified">
+                                    <i class="fas fa-file-circle-check"></i> @donor.ApprovedCount/@donor.ReportCount approved
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (donor.Verified)
+                            {
+                                <span class="rc-badge rc-badge--verified">
+                                    <i class="fas fa-circle-check"></i> Verified
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="rc-badge rc-badge--pending">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                @if (donor.DocumentsUploaded)
+                                {
+                                    <a asp-controller="Portal" asp-action="ViewDocuments"
+                                       asp-route-userId="@donor.UserId"
+                                       class="rc-btn rc-btn--sm rc-btn--outline">
+                                        <i class="fas fa-folder-open"></i> View Docs
+                                    </a>
+                                }
+                                @if (!donor.Verified)
+                                {
+                                    <form asp-action="Verify" asp-controller="Portal" method="post" style="display:inline;">
+                                        <input type="hidden" name="userId" value="@donor.UserId" />
+                                        <button type="submit" class="rc-btn rc-btn--success rc-btn--sm">
+                                            <i class="fas fa-check"></i> Verify
+                                        </button>
+                                    </form>
+                                }
+                                <form asp-action="Deactivate" asp-controller="Portal" method="post" style="display:inline;"
+                                      onsubmit="return confirm('Deactivate this donor?')">
+                                    <input type="hidden" name="userId" value="@donor.UserId" />
+                                    <button type="submit" class="rc-btn rc-btn--sm"
+                                            style="background:#dc3545;color:white;">
+                                        <i class="fas fa-ban"></i> Deactivate
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

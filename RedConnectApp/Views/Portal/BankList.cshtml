@@ -1,0 +1,64 @@
+@model List<RedConnect.ViewModels.BloodBankListViewModel>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Blood Banks";
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-hospital" style="color:var(--rc-red);"></i> Blood Banks</h1>
+    <p>All registered blood bank locations</p>
+</div>
+
+<div class="rc-card">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-list" style="color:var(--rc-red);"></i> Registered Banks</h3>
+        <div class="d-flex align-items-center gap-2">
+            <span class="rc-badge rc-badge--blood">@Model.Count Banks</span>
+            <a href="/Portal/RegisterBank" class="rc-btn rc-btn--primary rc-btn--sm">
+                <i class="fas fa-plus"></i> Add Bank
+            </a>
+        </div>
+    </div>
+    <div class="rc-table-wrap">
+        <table class="rc-table">
+            <thead>
+                <tr>
+                    <th>Location</th>
+                    <th>Address</th>
+                    <th>Staff Count</th>
+                    <th>Registered On</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4" style="font-size:0.9rem;">
+                            No blood banks registered yet.
+                        </td>
+                    </tr>
+                }
+                @foreach (var bank in Model)
+                {
+                    <tr>
+                        <td>
+                            <strong><i class="fas fa-hospital" style="color:var(--rc-red); margin-right:0.4rem;"></i>@bank.LocationName</strong>
+                        </td>
+                        <td style="font-size:0.875rem; color:var(--rc-gray-700);">
+                            <i class="fas fa-map-marker-alt" style="color:var(--rc-red); margin-right:0.3rem;"></i>
+                            @bank.Address
+                        </td>
+                        <td>
+                            <span class="rc-badge" style="background:#e7f0ff; color:#0d6efd;">
+                                <i class="fas fa-user-nurse"></i> @bank.StaffCount
+                            </span>
+                        </td>
+                        <td style="font-size:0.85rem; color:var(--rc-gray-500);">
+                            @bank.CreatedOn.ToString("MMM dd, yyyy")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

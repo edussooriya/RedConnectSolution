@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RedConnect.DAL;
 using RedConnectApp.DAL;
+using RedConnectApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,8 +21,16 @@ builder.Services.AddDbContext<MSSQLDBContext>(options =>
 
 builder.Services.AddScoped<MongoRepository>();
 builder.Services.AddScoped<DonorMapService>();
+builder.Services.AddScoped<DataSeeder>();
 
 var app = builder.Build();
+
+// ── Run seeder on startup ─────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    await seeder.SeedAsync();
+}
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -30,6 +39,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Account}/{action=Register}/{id?}");
+    pattern: "{controller=Dashboard}/{action=Index}/{id?}");
 
 app.Run();

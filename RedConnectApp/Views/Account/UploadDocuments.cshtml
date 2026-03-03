@@ -1,0 +1,115 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Upload Medical Documents";
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-file-medical" style="color:var(--rc-red);"></i> Upload Medical Documents</h1>
+    <p>Please upload your 3 medical reports to complete registration</p>
+</div>
+
+<div class="rc-card" style="max-width:680px;">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-clipboard-list" style="color:var(--rc-red);"></i> Required Documents</h3>
+    </div>
+    <div class="rc-card__body">
+
+        <div class="rc-alert" style="background:#fff3cd;border-color:#ffc107;color:#664d03;margin-bottom:1.5rem;">
+            <i class="fas fa-circle-info"></i>
+            Upload your latest <strong>blood test report</strong>, <strong>medical history</strong>, and
+            <strong>doctor's certificate</strong>. Accepted formats: PDF, JPG, PNG. Max 5 MB each.
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="rc-alert rc-alert--error mb-3">
+                <i class="fas fa-exclamation-circle"></i> @ViewBag.Error
+            </div>
+        }
+
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <div class="d-flex flex-column gap-4">
+
+                @for (int i = 1; i <= 3; i++)
+                {
+                    var label = i == 1 ? "Blood Test Report" : i == 2 ? "Medical History" : "Doctor's Certificate";
+                    var fieldName = $"report{i}";
+                    var divId = $"dropZone{i}";
+                    var previewId = $"preview{i}";
+                    <div>
+                        <label class="rc-form-label">
+                            <i class="fas fa-file-medical" style="color:var(--rc-red);"></i>
+                            Report @i — @label
+                        </label>
+                        <div id="@divId"
+                             onclick="document.getElementById('@fieldName').click()"
+                             style="border:2px dashed var(--rc-gray-300); border-radius:0.75rem;
+                                    padding:2rem; text-align:center; cursor:pointer;
+                                    background:var(--rc-gray-50); transition:border-color 0.2s;"
+                             ondragover="event.preventDefault();this.style.borderColor='var(--rc-red)';"
+                             ondragleave="this.style.borderColor='var(--rc-gray-300)';"
+                             ondrop="rcHandleDrop(event,'@fieldName','@divId','@previewId')">
+                            <i class="fas fa-cloud-arrow-up" style="font-size:2rem;color:var(--rc-gray-400);"></i>
+                            <p style="margin:0.5rem 0 0;font-size:0.875rem;color:var(--rc-gray-500);">
+                                Click or drag &amp; drop to upload
+                            </p>
+                            <div id="@previewId" style="margin-top:0.75rem;"></div>
+                        </div>
+                        <input type="file" id="@fieldName" name="@fieldName"
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               style="display:none;"
+                               onchange="rcPreviewFile(this,'@divId','@previewId')" required />
+                    </div>
+                }
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="rc-btn rc-btn--primary" id="submitBtn">
+                    <i class="fas fa-upload"></i> Submit Documents
+                </button>
+                <a href="/Account/Logout" class="rc-btn rc-btn--outline">Sign Out</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function rcPreviewFile(input, zoneId, previewId) {
+    const zone    = document.getElementById(zoneId);
+    const preview = document.getElementById(previewId);
+    const file    = input.files[0];
+    if (!file) return;
+
+    zone.style.borderColor = '#198754';
+    zone.style.background  = '#f0fff4';
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    let html;
+    if (['jpg','jpeg','png'].includes(ext)) {
+        const url = URL.createObjectURL(file);
+        html = `<img src="${url}" style="max-height:100px;border-radius:0.5rem;margin-top:0.25rem;" alt="preview">`;
+    } else {
+        html = `<span style="color:#198754;font-size:0.875rem;font-weight:600;">
+                    <i class="fas fa-file-pdf" style="color:#dc3545;"></i> ${file.name}
+                </span>`;
+    }
+    preview.innerHTML = html;
+}
+
+function rcHandleDrop(event, inputId, zoneId, previewId) {
+    event.preventDefault();
+    const input = document.getElementById(inputId);
+    const dt    = event.dataTransfer;
+    if (dt.files.length) {
+        // Create a DataTransfer to assign files to the input
+        const fileList = dt.files;
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(fileList[0]);
+        input.files = dataTransfer.files;
+        rcPreviewFile(input, zoneId, previewId);
+    }
+    document.getElementById(zoneId).style.borderColor = '#198754';
+}
+</script>
+}

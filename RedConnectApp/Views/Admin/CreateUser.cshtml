@@ -1,0 +1,321 @@
+@model RedConnect.ViewModels.AdminCreateUserViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Create User";
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-user-plus" style="color:var(--rc-red);"></i> Create User Account</h1>
+    <p>Create a new account for any user type</p>
+</div>
+
+<div class="rc-card" style="max-width:720px;">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-id-card-clip" style="color:var(--rc-red);"></i> Account Details</h3>
+    </div>
+    <div class="rc-card__body">
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="rc-alert rc-alert--error mb-3">
+                <i class="fas fa-exclamation-circle"></i> @ViewBag.Error
+            </div>
+        }
+
+        <form method="post" id="createUserForm">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-user"></i> Full Name</label>
+                    <input asp-for="Name" class="rc-input" placeholder="Full name" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-user-tag"></i> User Type</label>
+                    <select asp-for="SelectedUserTypeId"
+                            asp-items="@(new SelectList(Model.UserTypes, "UserTypeId", "UserTypeName"))"
+                            class="rc-select" id="userTypeSelect" onchange="rcToggleDonorSection()" required>
+                        <option value="0">Donor</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-envelope"></i> Email Address</label>
+                    <input asp-for="Email" type="email" class="rc-input" placeholder="user@example.com" required />
+                    <span asp-validation-for="Email" style="color:#dc3545;font-size:0.8rem;"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-lock"></i> Password</label>
+                    <div class="rc-input-wrap">
+                        <input asp-for="Password" type="password" class="rc-input"
+                               placeholder="Set a password" required style="padding-right:3rem;"
+                               oninput="rcStrength(this.value)">
+                        <span class="rc-pwd-toggle" onclick="rcTogglePwd('Password','pwdIcon')">
+                            <i class="fas fa-eye" id="pwdIcon"></i>
+                        </span>
+                    </div>
+                    <div class="rc-strength-bar"><div class="rc-strength-fill" id="strengthFill"></div></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-phone"></i> Phone</label>
+                    <input asp-for="Phone" class="rc-input" placeholder="0771234567" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-tint"></i> Blood Group</label>
+                    <select asp-for="BloodGroup" class="rc-select">
+                        <option value="">— Not Set —</option>
+                        @foreach (var bg in new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" })
+                        {
+                            <option value="@bg">@bg</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-venus-mars"></i> Gender</label>
+                    <select asp-for="Gender" class="rc-select">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ── Donor Section (visible only when Donor is selected) ── -->
+            <div id="donorLocationSection" style="display:none;">
+                <hr style="border-color:var(--rc-gray-200); margin:1.5rem 0;">
+                <p class="text-muted mb-3" style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">
+                    <i class="fas fa-id-card" style="color:var(--rc-red);"></i> Donor Details
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="rc-form-label"><i class="fas fa-id-card"></i> NIC</label>
+                        <input asp-for="NIC" class="rc-input" id="adminNicInput"
+                               placeholder="e.g. 951234567V  or  199512345678"
+                               oninput="rcAdminValidateNIC(this.value)"
+                               onblur="rcAdminValidateNIC(this.value)"
+                               maxlength="12" autocomplete="off" />
+                        <div id="adminNicMsg" style="font-size:0.8rem; margin-top:0.35rem; min-height:1rem;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="rc-form-label"><i class="fas fa-house"></i> Home Address</label>
+                        <input asp-for="Address" class="rc-input" id="addressInput"
+                               placeholder="Full home address" autocomplete="off" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="rc-form-label"><i class="fas fa-location-crosshairs"></i> Available Location</label>
+                        <div class="rc-input-wrap">
+                            <input asp-for="LocationText" class="rc-input" id="locationSearch"
+                                   placeholder="Search on map (e.g. Colombo, Sri Lanka)"
+                                   autocomplete="off" style="padding-right:2.5rem;" />
+                            <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:var(--rc-gray-400);pointer-events:none;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                        <input asp-for="AvailableLat" type="hidden" id="availableLat" />
+                        <input asp-for="AvailableLng" type="hidden" id="availableLng" />
+                    </div>
+
+                    <!-- Map Preview -->
+                    <div class="col-12">
+                        <div id="mapPreview" style="
+                            height:280px;
+                            border-radius:0.75rem;
+                            border:1px solid var(--rc-gray-200);
+                            background:var(--rc-gray-100);
+                            display:none;
+                            overflow:hidden;">
+                        </div>
+                        <div id="mapPlaceholder" style="
+                            height:280px;
+                            border-radius:0.75rem;
+                            border:2px dashed var(--rc-gray-200);
+                            background:var(--rc-gray-50);
+                            display:flex;
+                            flex-direction:column;
+                            align-items:center;
+                            justify-content:center;
+                            color:var(--rc-gray-400);
+                            gap:0.5rem;">
+                            <i class="fas fa-map" style="font-size:2rem;"></i>
+                            <span style="font-size:0.875rem;">Search a location above to preview on map</span>
+                        </div>
+                        <div id="mapCoordsBadge" style="display:none; margin-top:0.5rem;">
+                            <span class="rc-badge rc-badge--verified">
+                                <i class="fas fa-circle-check"></i>
+                                <span id="mapCoordsText">Location captured</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="rc-btn rc-btn--primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+                <a href="/Admin/UserList" class="rc-btn rc-btn--outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=initAdminAutocomplete" async defer></script>
+<script>
+// ── Show/hide donor location section based on user type ──
+function rcToggleDonorSection() {
+    const sel = document.getElementById('userTypeSelect');
+    const sec = document.getElementById('donorLocationSection');
+    sec.style.display = (sel.value === '0') ? 'block' : 'none';
+}
+
+// Run on page load to set correct initial state
+document.addEventListener('DOMContentLoaded', function () {
+    rcToggleDonorSection();
+});
+
+// ── Google Maps autocomplete for donor location ──
+var _map, _marker;
+
+function initAdminAutocomplete() {
+    const input = document.getElementById('locationSearch');
+    if (!input) return;
+
+    const ac = new google.maps.places.Autocomplete(input, {
+        types: ['geocode'],
+        componentRestrictions: { country: 'lk' }
+    });
+
+    ac.addListener('place_changed', function () {
+        const place = ac.getPlace();
+        if (!place.geometry) {
+            alert('No location details found. Please select from the dropdown.');
+            return;
+        }
+
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        document.getElementById('availableLat').value = lat;
+        document.getElementById('availableLng').value = lng;
+
+        // Show badge
+        document.getElementById('mapCoordsText').textContent =
+            lat.toFixed(5) + ', ' + lng.toFixed(5);
+        document.getElementById('mapCoordsBadge').style.display = 'block';
+
+        // Show map preview
+        document.getElementById('mapPlaceholder').style.display = 'none';
+        const mapDiv = document.getElementById('mapPreview');
+        mapDiv.style.display = 'block';
+
+        if (!_map) {
+            _map = new google.maps.Map(mapDiv, {
+                zoom: 14,
+                center: { lat: lat, lng: lng },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false
+            });
+            _marker = new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: _map,
+                title: place.name
+            });
+        } else {
+            const pos = { lat: lat, lng: lng };
+            _map.setCenter(pos);
+            _map.setZoom(14);
+            _marker.setPosition(pos);
+        }
+    });
+}
+
+// ── Sri Lankan NIC validator (same logic as Register page) ──
+function validateSriLankanNIC(raw) {
+    const nic = raw.trim().toUpperCase();
+    if (!nic) return { valid: false, error: 'NIC is required.' };
+    let birthYear, dayOfYear;
+    if (/^\d{9}[VX]$/.test(nic)) {
+        const yy = parseInt(nic.substring(0, 2), 10);
+        const cy = new Date().getFullYear() % 100;
+        birthYear = (yy > cy) ? (1900 + yy) : (2000 + yy);
+        dayOfYear = parseInt(nic.substring(2, 5), 10);
+    } else if (/^\d{12}$/.test(nic)) {
+        birthYear = parseInt(nic.substring(0, 4), 10);
+        dayOfYear = parseInt(nic.substring(4, 7), 10);
+        const currentYear = new Date().getFullYear();
+        if (birthYear < 1900 || birthYear > currentYear)
+            return { valid: false, error: 'Invalid birth year in NIC.' };
+    } else {
+        if (nic.length === 10 && !/[VX]$/.test(nic))
+            return { valid: false, error: 'Old NIC (10 chars) must end with V or X.' };
+        if (nic.length > 10 && nic.length < 12)
+            return { valid: false, error: 'New NIC must be exactly 12 digits.' };
+        return { valid: false, error: 'Old: 9 digits + V/X  |  New: 12 digits' };
+    }
+    const isFemale = dayOfYear > 500;
+    if (isFemale) dayOfYear -= 500;
+    if (dayOfYear < 1 || dayOfYear > 366) return { valid: false, error: 'Invalid day-of-year in NIC.' };
+    const birthDate = new Date(birthYear, 0, dayOfYear);
+    if (birthDate.getFullYear() !== birthYear) return { valid: false, error: 'Day 366 only valid for leap years.' };
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const dm = today.getMonth() - birthDate.getMonth();
+    if (dm < 0 || (dm === 0 && today.getDate() < birthDate.getDate())) age--;
+    if (age < 18) {
+        const eligible = new Date(birthDate);
+        eligible.setFullYear(eligible.getFullYear() + 18);
+        return { valid: false, error: `Must be 18+. Eligible from ${eligible.toLocaleDateString('en-LK', { year:'numeric', month:'long', day:'numeric' })}.` };
+    }
+    return { valid: true, age, birthDate, isFemale };
+}
+
+function rcAdminValidateNIC(value) {
+    const inp = document.getElementById('adminNicInput');
+    const msg = document.getElementById('adminNicMsg');
+    inp.style.borderColor = '';
+    msg.textContent = '';
+    const v = value.trim();
+    if (!v) return;
+    if (v.length < 10) {
+        msg.style.color = 'var(--rc-gray-500)';
+        msg.textContent = 'Old: 9 digits + V/X  |  New: 12 digits';
+        return;
+    }
+    const result = validateSriLankanNIC(v);
+    if (result.valid) {
+        inp.style.borderColor = '#198754';
+        msg.style.color = '#198754';
+        const dob = result.birthDate.toLocaleDateString('en-LK', { year:'numeric', month:'long', day:'numeric' });
+        msg.textContent = `✓ Valid — Age: ${result.age}  |  DOB: ${dob}  |  ${result.isFemale ? 'Female' : 'Male'}`;
+    } else {
+        inp.style.borderColor = '#dc3545';
+        msg.style.color = '#dc3545';
+        msg.textContent = '✗ ' + result.error;
+    }
+}
+
+// ── Password helpers ──
+function rcTogglePwd(id, iconId) {
+    const inp = document.getElementById(id);
+    const ico = document.getElementById(iconId);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    ico.classList.toggle('fa-eye', !isPass);
+    ico.classList.toggle('fa-eye-slash', isPass);
+}
+
+function rcStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    fill.className = 'rc-strength-fill';
+    if (!val) return;
+    fill.classList.add(val.length < 6 ? 'weak' : val.length < 10 ? 'medium' : 'strong');
+}
+</script>
+}
