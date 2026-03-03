@@ -1,67 +1,322 @@
-@model RedConnect.ViewModels.UserViewModel
-<form method="post">
-    <input name="email" placeholder="Email" />
-    <input name="password" type="password" placeholder="Password" />
-    <input name="name" placeholder="Name" />
-    <input name="address" placeholder="Address" />
-    <input name="nic" placeholder="NIC" />
-    <input name="phone" placeholder="phone"/>
-  
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Create Account";
+}
 
-    <div>
-        <label>Search Location</label>
-        <input asp-for="LocationText"
-               id="locationSearch"
-               class="form-control"
-               placeholder="Type a location (e.g., Colombo, Sri Lanka)" />
+@section Brand {
+    <div class="rc-brand-panel">
+        <i class="fas fa-heart-pulse rc-brand-icon"></i>
+        <div class="rc-brand-title">Red Connect</div>
+        <div class="rc-brand-tagline">Every Drop Counts</div>
+        <p class="rc-brand-desc">
+            Join thousands of donors who are making a difference in their communities.
+        </p>
+        <div class="rc-brand-features">
+            <div class="rc-feature"><i class="fas fa-shield-alt"></i><span>Safe &amp; Secure</span></div>
+            <div class="rc-feature"><i class="fas fa-clock"></i><span>Quick Registration</span></div>
+            <div class="rc-feature"><i class="fas fa-map-marker-alt"></i><span>Location-Based Matching</span></div>
+            <div class="rc-feature"><i class="fas fa-mobile-alt"></i><span>Mobile Friendly</span></div>
+        </div>
+    </div>
+}
+
+<div class="rc-form-header">
+    <h2>Join Red Connect</h2>
+    <p>Create your account and start saving lives</p>
+</div>
+
+<form method="post" onsubmit="return rcValidateRegister()">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="rc-form-label"><i class="fas fa-user"></i> Full Name</label>
+            <input type="text" class="rc-input" name="name" placeholder="Your full name" required>
+        </div>
+        <div class="col-md-6">
+            <label class="rc-form-label"><i class="fas fa-id-card"></i> NIC</label>
+            <input type="text" class="rc-input" id="nicInput" name="nic"
+                   placeholder="e.g. 951234567V  or  199512345678"
+                   oninput="rcValidateNIC(this.value)"
+                   onblur="rcValidateNIC(this.value)"
+                   maxlength="12" required autocomplete="off">
+            <div id="nicMsg" style="font-size:0.8rem; margin-top:0.35rem; min-height:1rem;"></div>
+        </div>
+
+        <div class="col-12">
+            <label class="rc-form-label"><i class="fas fa-envelope"></i> Email Address</label>
+            <input type="email" class="rc-input" name="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="col-md-4">
+            <label class="rc-form-label"><i class="fas fa-phone"></i> Phone</label>
+            <input type="tel" class="rc-input" name="phone" placeholder="0771234567" required>
+        </div>
+        <div class="col-md-4">
+            <label class="rc-form-label"><i class="fas fa-tint"></i> Blood Type</label>
+            <select class="rc-select" name="bloodGroup">
+                <option value="">Don't Know</option>
+                @foreach (var bg in new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" })
+                {
+                    <option value="@bg">@bg</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="rc-form-label"><i class="fas fa-venus-mars"></i> Gender</label>
+            <select class="rc-select" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="rc-form-label"><i class="fas fa-map-marker-alt"></i> Address</label>
+            <input type="text" class="rc-input" name="address" placeholder="Your full address" required>
+        </div>
+
+        <div class="col-12">
+            <label class="rc-form-label"><i class="fas fa-location-crosshairs"></i> Available Location</label>
+            <input type="text" class="rc-input" id="locationSearch" name="locationText"
+                   placeholder="Type a location (e.g., Colombo, Sri Lanka)" autocomplete="off">
+            <input type="hidden" id="lat" name="availableLat" value="0">
+            <input type="hidden" id="lng" name="availableLng" value="0">
+            <input type="hidden" name="donatedLat" value="0">
+            <input type="hidden" name="donatedLng" value="0">
+        </div>
+
+        <div class="col-md-6">
+            <label class="rc-form-label"><i class="fas fa-lock"></i> Password</label>
+            <div class="rc-input-wrap">
+                <input type="password" class="rc-input" id="regPwd" name="password"
+                       placeholder="Min. 8 characters" required
+                       oninput="rcStrength(this.value)" style="padding-right:3rem;">
+                <span class="rc-pwd-toggle" onclick="rcTogglePwd('regPwd','regPwdIcon')">
+                    <i class="fas fa-eye" id="regPwdIcon"></i>
+                </span>
+            </div>
+            <div class="rc-strength-bar"><div class="rc-strength-fill" id="strengthFill"></div></div>
+        </div>
+        <div class="col-md-6">
+            <label class="rc-form-label"><i class="fas fa-lock"></i> Confirm Password</label>
+            <div class="rc-input-wrap">
+                <input type="password" class="rc-input" id="regCpwd" name="confirmPassword"
+                       placeholder="Re-enter password" required
+                       oninput="rcCheckMatch()" style="padding-right:3rem;">
+                <span class="rc-pwd-toggle" onclick="rcTogglePwd('regCpwd','regCpwdIcon')">
+                    <i class="fas fa-eye" id="regCpwdIcon"></i>
+                </span>
+            </div>
+            <div id="matchMsg" style="font-size:0.8rem; margin-top:0.3rem;"></div>
+        </div>
+
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                <label class="form-check-label text-muted" for="agreeTerms" style="font-size:0.875rem;">
+                    I agree to the <a href="#" class="rc-link">Terms of Service</a> and
+                    <a href="#" class="rc-link">Privacy Policy</a>
+                </label>
+            </div>
+        </div>
     </div>
 
-    <div>
-       
-        <input asp-for="AvailableLat"
-               id="lat"
-               type="hidden"
-               step="any"
-               class="form-control" />
-    </div>
-
-    <div>
-      
-        <input asp-for="AvailableLng"
-               id="lng"
-               type="hidden"
-               step="any"
-               class="form-control" />
-    </div>
-
-    <button type="submit">Register</button>
+    <button type="submit" class="rc-btn rc-btn--primary rc-btn--full mt-4">
+        <i class="fas fa-user-plus"></i> Create Account
+    </button>
 </form>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGFA-UcwC7AvF2sCT3MHNCvqOu5tX51_M&libraries=places"></script>
+
+<div class="text-center mt-3">
+    <p class="text-muted" style="font-size:0.9rem;">
+        Already have an account? <a href="/Account/Login" class="rc-link">Sign In</a>
+    </p>
+</div>
+
+@section Scripts {
+<script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=initAutocomplete" async defer></script>
 <script>
-    function initAutocomplete() {
-        const input = document.getElementById("locationSearch");
 
-        const autocomplete = new google.maps.places.Autocomplete(input, {
-            types: ["geocode"],
-            componentRestrictions: { country: "lk" } // restrict to Sri Lanka
-        });
+/* ============================================================
+   SRI LANKAN NIC VALIDATOR
+   Old NIC : 9 digits + V/X  (e.g. 951234567V)
+             YYDDDDDDDV  — YY=birth year (2-digit), DDD=day-of-year
+   New NIC : 12 digits       (e.g. 199512345678)
+             YYYYDDDDDDDDD  — YYYY=birth year (4-digit), DDD=day-of-year
+   Female  : day-of-year 501–866 (subtract 500 for actual day)
+   ============================================================ */
+function validateSriLankanNIC(raw) {
+    const nic = raw.trim().toUpperCase();
+    if (!nic) return { valid: false, error: 'NIC is required.' };
 
-        autocomplete.addListener("place_changed", function () {
-            const place = autocomplete.getPlace();
+    let birthYear, dayOfYear;
 
-            if (!place.geometry) {
-                alert("No details available for selected location");
-                return;
-            }
+    if (/^\d{9}[VX]$/.test(nic)) {
+        // ── Old format ──
+        const yy = parseInt(nic.substring(0, 2), 10);
+        const cy = new Date().getFullYear() % 100;          // e.g. 26
+        birthYear = (yy > cy) ? (1900 + yy) : (2000 + yy);
+        dayOfYear = parseInt(nic.substring(2, 5), 10);
 
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
+    } else if (/^\d{12}$/.test(nic)) {
+        // ── New format ──
+        birthYear = parseInt(nic.substring(0, 4), 10);
+        dayOfYear = parseInt(nic.substring(4, 7), 10);
 
-            document.getElementById("lat").value = lat;
-            document.getElementById("lng").value = lng;
-        });
+        const currentYear = new Date().getFullYear();
+        if (birthYear < 1900 || birthYear > currentYear) {
+            return { valid: false, error: 'Invalid birth year in NIC.' };
+        }
+
+    } else {
+        // ── Format hint ──
+        if (nic.length === 10 && !/[VX]$/.test(nic))
+            return { valid: false, error: 'Old NIC (10 chars) must end with V or X.' };
+        if (nic.length > 10 && nic.length < 12)
+            return { valid: false, error: 'New NIC must be exactly 12 digits.' };
+        return {
+            valid: false,
+            error: 'Invalid format. Old: 9 digits + V/X (e.g. 951234567V)  |  New: 12 digits (e.g. 199512345678)'
+        };
     }
 
-    window.onload = initAutocomplete;
-</script>
+    // Female: day-of-year 501–866 → subtract 500
+    const isFemale = dayOfYear > 500;
+    if (isFemale) dayOfYear -= 500;
 
+    if (dayOfYear < 1 || dayOfYear > 366) {
+        return { valid: false, error: 'Invalid day-of-year encoded in NIC.' };
+    }
+
+    // Convert day-of-year → actual date
+    const birthDate = new Date(birthYear, 0, dayOfYear);
+
+    // Sanity: day 366 in a non-leap year rolls to Jan 1 next year
+    if (birthDate.getFullYear() !== birthYear) {
+        return { valid: false, error: 'Day 366 is only valid for leap years.' };
+    }
+
+    // Age calculation
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const dm = today.getMonth() - birthDate.getMonth();
+    if (dm < 0 || (dm === 0 && today.getDate() < birthDate.getDate())) age--;
+
+    if (age < 0 || age > 120) {
+        return { valid: false, error: 'Date encoded in NIC appears invalid.' };
+    }
+
+    if (age < 18) {
+        const eligible = new Date(birthDate);
+        eligible.setFullYear(eligible.getFullYear() + 18);
+        const eligibleStr = eligible.toLocaleDateString('en-LK', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        return {
+            valid: false,
+            error: `You must be 18 or older to register. You will be eligible from ${eligibleStr}.`
+        };
+    }
+
+    return { valid: true, age, birthDate, isFemale };
+}
+
+/* Live UI feedback on the NIC field */
+function rcValidateNIC(value) {
+    const inp = document.getElementById('nicInput');
+    const msg = document.getElementById('nicMsg');
+    inp.style.borderColor = '';
+    msg.textContent = '';
+    msg.style.color  = '';
+
+    const v = value.trim();
+    if (!v) return;
+
+    // Typing hint — not enough chars yet
+    if (v.length < 10) {
+        msg.style.color = 'var(--rc-gray-500)';
+        msg.textContent = 'Old: 9 digits + V/X  |  New: 12 digits';
+        return;
+    }
+
+    const result = validateSriLankanNIC(v);
+
+    if (result.valid) {
+        inp.style.borderColor = '#198754';
+        msg.style.color = '#198754';
+        const dob = result.birthDate.toLocaleDateString('en-LK', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        msg.textContent = `✓ Valid NIC — Age: ${result.age} yrs  |  DOB: ${dob}  |  ${result.isFemale ? 'Female' : 'Male'}`;
+    } else {
+        inp.style.borderColor = '#dc3545';
+        msg.style.color = '#dc3545';
+        msg.textContent = '✗ ' + result.error;
+    }
+}
+
+/* ── Other helpers ── */
+function rcTogglePwd(id, iconId) {
+    const inp = document.getElementById(id);
+    const ico = document.getElementById(iconId);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    ico.classList.toggle('fa-eye', !isPass);
+    ico.classList.toggle('fa-eye-slash', isPass);
+}
+
+function rcStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    fill.className = 'rc-strength-fill';
+    if (!val) return;
+    fill.classList.add(val.length < 6 ? 'weak' : val.length < 10 ? 'medium' : 'strong');
+}
+
+function rcCheckMatch() {
+    const pw  = document.getElementById('regPwd').value;
+    const cpw = document.getElementById('regCpwd').value;
+    const msg = document.getElementById('matchMsg');
+    if (!cpw) { msg.textContent = ''; return; }
+    msg.style.color = pw === cpw ? '#198754' : '#dc3545';
+    msg.textContent  = pw === cpw ? '✓ Passwords match' : '✗ Passwords do not match';
+}
+
+function rcValidateRegister() {
+    // 1 — NIC validation (format + age)
+    const nicResult = validateSriLankanNIC(document.getElementById('nicInput').value);
+    if (!nicResult.valid) {
+        const msg = document.getElementById('nicMsg');
+        msg.style.color  = '#dc3545';
+        msg.textContent  = '✗ ' + nicResult.error;
+        document.getElementById('nicInput').focus();
+        return false;
+    }
+
+    // 2 — Password match
+    const pw  = document.getElementById('regPwd').value;
+    const cpw = document.getElementById('regCpwd').value;
+    if (pw !== cpw) {
+        const msg = document.getElementById('matchMsg');
+        msg.style.color = '#dc3545';
+        msg.textContent = '✗ Passwords do not match';
+        document.getElementById('regCpwd').focus();
+        return false;
+    }
+    return true;
+}
+
+function initAutocomplete() {
+    const input = document.getElementById('locationSearch');
+    const ac = new google.maps.places.Autocomplete(input, {
+        types: ['geocode'],
+        componentRestrictions: { country: 'lk' }
+    });
+    ac.addListener('place_changed', function () {
+        const place = ac.getPlace();
+        if (!place.geometry) { alert('No details for selected location'); return; }
+        document.getElementById('lat').value = place.geometry.location.lat();
+        document.getElementById('lng').value = place.geometry.location.lng();
+    });
+}
+</script>
+}

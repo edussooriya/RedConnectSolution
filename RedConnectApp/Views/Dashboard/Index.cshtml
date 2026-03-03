@@ -1,0 +1,161 @@
+@model RedConnect.ViewModels.DashboardViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="rc-page-header">
+    <h1><i class="fas fa-gauge-high" style="color:var(--rc-red);"></i> Dashboard</h1>
+    <p>Welcome back, <strong>@Model.UserName</strong>!</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="rc-card rc-card--stat">
+            <div class="rc-card__body d-flex align-items-center gap-3">
+                <div class="rc-stat-icon" style="background:rgba(139,0,0,0.08); color:var(--rc-red);">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <div class="rc-stat-value">@Model.TotalDonors</div>
+                    <div class="rc-stat-label">Total Donors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="rc-card rc-card--stat">
+            <div class="rc-card__body d-flex align-items-center gap-3">
+                <div class="rc-stat-icon" style="background:rgba(25,135,84,0.1); color:#198754;">
+                    <i class="fas fa-circle-check"></i>
+                </div>
+                <div>
+                    <div class="rc-stat-value">@Model.VerifiedDonors</div>
+                    <div class="rc-stat-label">Verified Donors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="rc-card rc-card--stat">
+            <div class="rc-card__body d-flex align-items-center gap-3">
+                <div class="rc-stat-icon" style="background:rgba(255,193,7,0.12); color:#856404;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <div class="rc-stat-value">@Model.PendingDonors</div>
+                    <div class="rc-stat-label">Pending Review</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="rc-card rc-card--stat">
+            <div class="rc-card__body d-flex align-items-center gap-3">
+                <div class="rc-stat-icon" style="background:rgba(13,110,253,0.1); color:#0d6efd;">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <div>
+                    <div class="rc-stat-value">@Model.TotalBanks</div>
+                    <div class="rc-stat-label">Blood Banks</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="rc-card">
+            <div class="rc-card__header">
+                <h3><i class="fas fa-bolt" style="color:var(--rc-red);"></i> Quick Actions</h3>
+            </div>
+            <div class="rc-card__body">
+                <div class="d-flex flex-column gap-2">
+                    <a href="/Account/Edit?id=@Context.Session.GetInt32("UserId")" class="rc-btn rc-btn--outline">
+                        <i class="fas fa-user-edit"></i> Edit My Profile
+                    </a>
+                    <a href="/Map/Donors" class="rc-btn rc-btn--outline">
+                        <i class="fas fa-map-marked-alt"></i> View Donor Map
+                    </a>
+                    <a href="/Account/ChangePassword" class="rc-btn rc-btn--outline">
+                        <i class="fas fa-lock"></i> Change Password
+                    </a>
+                    @if (Model.UserTypeId != 0)
+                    {
+                        <a href="/Portal/DonorList" class="rc-btn rc-btn--outline">
+                            <i class="fas fa-list-check"></i> Manage Donors
+                        </a>
+                        <a href="/Portal/BankList" class="rc-btn rc-btn--outline">
+                            <i class="fas fa-hospital"></i> Blood Bank List
+                        </a>
+                        <a href="/Portal/RegisterBank" class="rc-btn rc-btn--primary">
+                            <i class="fas fa-plus"></i> Register Blood Bank
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="rc-card">
+            <div class="rc-card__header">
+                <h3><i class="fas fa-id-badge" style="color:var(--rc-red);"></i> My Details</h3>
+            </div>
+            <div class="rc-card__body">
+                <table style="width:100%; font-size:0.9rem; border-collapse:collapse;">
+                    <tr style="border-bottom:1px solid var(--rc-gray-200);">
+                        <td style="padding:0.6rem 0; color:var(--rc-gray-500); width:40%;">Name</td>
+                        <td style="padding:0.6rem 0; font-weight:600;">@Model.UserName</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--rc-gray-200);">
+                        <td style="padding:0.6rem 0; color:var(--rc-gray-500);">Blood Group</td>
+                        <td style="padding:0.6rem 0;">
+                            @if (!string.IsNullOrEmpty(Model.BloodGroup))
+                            {
+                                <span class="rc-badge rc-badge--blood">
+                                    <i class="fas fa-tint"></i> @Model.BloodGroup
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-muted" style="font-size:0.85rem;">Not set</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--rc-gray-200);">
+                        <td style="padding:0.6rem 0; color:var(--rc-gray-500);">Role</td>
+                        <td style="padding:0.6rem 0;">
+                            @if (Model.UserTypeId == 0)
+                            {
+                                <span class="rc-badge rc-badge--verified"><i class="fas fa-heart"></i> Donor</span>
+                            }
+                            else
+                            {
+                                <span class="rc-badge" style="background:#e7f0ff;color:#0d6efd;"><i class="fas fa-shield"></i> Admin</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.6rem 0; color:var(--rc-gray-500);">User ID</td>
+                        <td style="padding:0.6rem 0; font-family:monospace; color:var(--rc-gray-700);">
+                            #@Context.Session.GetInt32("UserId")
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.rc-stat-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+.rc-stat-value { font-size:1.8rem; font-weight:700; line-height:1; color:var(--rc-gray-900); }
+.rc-stat-label { font-size:0.8rem; color:var(--rc-gray-500); margin-top:0.2rem; }
+.rc-card--stat .rc-card__body { padding:1.25rem; }
+</style>
+}

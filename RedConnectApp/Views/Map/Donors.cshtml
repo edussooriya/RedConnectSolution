@@ -1,87 +1,316 @@
-﻿@model List<RedConnect.ViewModels.DonorMapViewModel>
-
+@model List<RedConnect.ViewModels.DonorMapViewModel>
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
 @{
-    ViewData["Title"] = "Active Donors Map";
+    Layout = "_Layout";
+    ViewData["Title"] = "Donor Map";
+    var selectedBg = ViewBag.BloodGroup as string;
 }
 
-<h2>Active Donors Map</h2>
+<div class="rc-page-header">
+    <h1><i class="fas fa-map-marked-alt" style="color:var(--rc-red);"></i> Donor Map</h1>
+    <p>Locate active blood donors across Sri Lanka</p>
+</div>
 
-<div id="map" style="height:500px; width:100%;"></div>
+<!-- Filter Bar -->
+<div class="rc-card mb-3">
+    <div class="rc-card__body" style="padding:1rem 1.5rem;">
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGFA-UcwC7AvF2sCT3MHNCvqOu5tX51_M"></script>
-
-<script>
-
-    function initMap() {
-
-       
-
-        var map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 8,
-            center: { lat: 6.9271, lng: 79.8612 } // Colombo default
-        });
-
-        var donors = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
-
-        console.log("Donors from server:", donors); // Debug
-
-        var bounds = new google.maps.LatLngBounds();
-
-        donors.forEach(function (donor) {
-
-            // Force numeric conversion
-            var lat = Number(donor.Lat);
-            var lng = Number(donor.Lng);
-
-            // Validate numbers before creating marker
-            if (!isNaN(lat) && !isNaN(lng)) {
-
-                var position = { lat: lat, lng: lng };
-
-                var marker = new google.maps.Marker({
-                    position: position,
-                    map: map
-                });
-
-                 var verifiedBadge = donor.Verified
-        ? `<span style="color:green;font-weight:bold;">✅ Verified</span>`
-        : `<span style="color:red;font-weight:bold;">❌ Not Verified</span>`;
-
-
-                    var content =
-                    "<strong>Donor Name:</strong> " + donor.Name +
-                    "<br/><strong>Status:</strong>"+ verifiedBadge +
-                    "<br/><strong>Blood Group:</strong> " + donor.BloodGroup +
-                    "<br/><strong>Location:</strong> " +
-                    (donor.LocationText ? donor.LocationText : "N/A");
-                  
-
-                    if (donor.Concent) {
-                        content += "<br/><strong>Contact:</strong> " + donor.Phone;
+        <!-- Row 1: Blood Group + Legend -->
+        <form method="get" action="/Map/Donors"
+              class="d-flex align-items-center gap-3 flex-wrap mb-3"
+              style="border-bottom:1px solid var(--rc-gray-100);padding-bottom:1rem;">
+            <label class="rc-form-label mb-0" style="white-space:nowrap;">
+                <i class="fas fa-tint" style="color:var(--rc-red);"></i> Blood Group
+            </label>
+            <select name="bloodGroup" class="rc-select" style="max-width:160px;"
+                    onchange="this.form.submit()">
+                <option value="">All Types</option>
+                @foreach (var bg in new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" })
+                {
+                    if (selectedBg == bg)
+                    {
+                        <option value="@bg" selected>@bg</option>
                     }
-
-
-
-                var infoWindow = new google.maps.InfoWindow({
-                    content:
-                       content
-                 });
-
-                marker.addListener("click", function () {
-                    infoWindow.open(map, marker);
-                });
-
-                bounds.extend(position);
+                    else
+                    {
+                        <option value="@bg">@bg</option>
+                    }
+                }
+            </select>
+            @if (!string.IsNullOrEmpty(selectedBg))
+            {
+                <a href="/Map/Donors" class="rc-btn rc-btn--outline rc-btn--sm">
+                    <i class="fas fa-times"></i> Clear
+                </a>
             }
-            else {
-                console.warn("Invalid coordinates for donor:", donor);
-            }
+            <!-- Legend -->
+            <div class="d-flex align-items-center gap-3 ms-auto flex-wrap">
+                <span id="donorCountBadge" class="rc-badge rc-badge--blood">@Model.Count Donors</span>
+                <span style="font-size:0.78rem;color:var(--rc-gray-600);display:flex;align-items:center;gap:0.35rem;">
+                    <span style="width:11px;height:11px;border-radius:50%;background:#8B0000;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #8B0000;"></span> Verified
+                </span>
+                <span style="font-size:0.78rem;color:var(--rc-gray-600);display:flex;align-items:center;gap:0.35rem;">
+                    <span style="width:11px;height:11px;border-radius:50%;background:#c0392b;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #c0392b;opacity:0.6;"></span> Pending
+                </span>
+                <span style="font-size:0.78rem;color:var(--rc-gray-600);display:flex;align-items:center;gap:0.35rem;">
+                    <span style="width:11px;height:11px;border-radius:50%;background:#1a6fc4;display:inline-block;border:2px solid white;box-shadow:0 0 0 1px #1a6fc4;"></span> Blood Bank
+                </span>
+            </div>
+        </form>
+
+        <!-- Row 2: Location Search -->
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <label class="rc-form-label mb-0" style="white-space:nowrap;">
+                <i class="fas fa-location-dot" style="color:var(--rc-red);"></i> Location
+            </label>
+            <div class="rc-input-wrap" style="flex:1;min-width:200px;max-width:340px;">
+                <input type="text" id="locationSearchInput" class="rc-input"
+                       placeholder="Search area (e.g. Colombo, Kandy…)"
+                       autocomplete="off" style="padding-right:2.5rem;" />
+                <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);
+                             color:var(--rc-gray-400);pointer-events:none;">
+                    <i class="fas fa-search"></i>
+                </span>
+            </div>
+            <label class="rc-form-label mb-0" style="white-space:nowrap;">
+                <i class="fas fa-circle-dot" style="color:var(--rc-red);"></i> Radius
+            </label>
+            <select id="radiusSelect" class="rc-select" style="max-width:130px;"
+                    onchange="rcApplyLocationFilter()">
+                <option value="10">10 km</option>
+                <option value="25" selected>25 km</option>
+                <option value="50">50 km</option>
+                <option value="100">100 km</option>
+                <option value="0">Island-wide</option>
+            </select>
+            <button type="button" id="clearLocationBtn"
+                    class="rc-btn rc-btn--outline rc-btn--sm"
+                    onclick="rcClearLocation()" style="display:none;">
+                <i class="fas fa-times"></i> Clear
+            </button>
+            <span id="locationFilterBadge" style="display:none;"
+                  class="rc-badge rc-badge--verified">
+                <i class="fas fa-location-dot"></i>
+                <span id="locationFilterText"></span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Map -->
+<div class="rc-card">
+    <div id="map" style="height:580px; width:100%;border-radius:0.5rem;"></div>
+</div>
+
+@section Scripts {
+<script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=rcInitMap" async defer></script>
+<script>
+var _map, _markerEntries = [], _bankMarkers = [], _circle = null;
+var _searchCenter = null;
+
+var donors = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
+var banks  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.BloodBanks ?? new object[0]));
+
+// ── Haversine distance (km) ──────────────────────────────────────────────────
+function rcHaversine(lat1, lng1, lat2, lng2) {
+    var R  = 6371;
+    var dL = (lat2 - lat1) * Math.PI / 180;
+    var dG = (lng2 - lng1) * Math.PI / 180;
+    var a  = Math.sin(dL/2) * Math.sin(dL/2) +
+             Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+             Math.sin(dG/2) * Math.sin(dG/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Apply location radius filter ─────────────────────────────────────────────
+function rcApplyLocationFilter() {
+    var radius = parseInt(document.getElementById('radiusSelect').value, 10);
+    var count  = 0;
+
+    _markerEntries.forEach(function(e) {
+        var show = true;
+        if (_searchCenter && radius > 0) {
+            var dist = rcHaversine(_searchCenter.lat, _searchCenter.lng,
+                                   e.lat, e.lng);
+            show = dist <= radius;
+        }
+        e.marker.setVisible(show);
+        if (show) count++;
+    });
+
+    // Update count badge
+    document.getElementById('donorCountBadge').textContent = count + ' Donor' + (count !== 1 ? 's' : '');
+
+    // Update search circle
+    if (_circle) { _circle.setMap(null); _circle = null; }
+    if (_searchCenter && radius > 0) {
+        _circle = new google.maps.Circle({
+            map:         _map,
+            center:      _searchCenter,
+            radius:      radius * 1000,
+            strokeColor: '#8B0000',
+            strokeOpacity: 0.5,
+            strokeWeight: 2,
+            fillColor:   '#8B0000',
+            fillOpacity: 0.06
+        });
+    }
+}
+
+// ── Clear location filter ────────────────────────────────────────────────────
+function rcClearLocation() {
+    document.getElementById('locationSearchInput').value = '';
+    document.getElementById('locationFilterBadge').style.display = 'none';
+    document.getElementById('clearLocationBtn').style.display   = 'none';
+    _searchCenter = null;
+
+    if (_circle) { _circle.setMap(null); _circle = null; }
+
+    // Show all markers & reset count
+    _markerEntries.forEach(function(e) { e.marker.setVisible(true); });
+    document.getElementById('donorCountBadge').textContent =
+        donors.length + ' Donor' + (donors.length !== 1 ? 's' : '');
+
+    // Re-fit bounds
+    var bounds = new google.maps.LatLngBounds();
+    _markerEntries.forEach(function(e) {
+        if (e.lat !== 0 || e.lng !== 0) bounds.extend({ lat: e.lat, lng: e.lng });
+    });
+    if (!bounds.isEmpty()) _map.fitBounds(bounds);
+}
+
+// ── Map init ─────────────────────────────────────────────────────────────────
+function rcInitMap() {
+    _map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 8,
+        center: { lat: 6.9271, lng: 79.8612 },
+        styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
+    });
+
+    var bounds = new google.maps.LatLngBounds();
+    var hasPoints = false;
+    var openIW = null;
+
+    // ── Donor markers (red) ──
+    donors.forEach(function(d) {
+        var lat = Number(d.Lat), lng = Number(d.Lng);
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+        var marker = new google.maps.Marker({
+            position: { lat: lat, lng: lng },
+            map: _map,
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor:   d.Verified ? '#8B0000' : '#c0392b',
+                fillOpacity: d.Verified ? 0.9 : 0.5,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                scale: 10
+            },
+            title: d.Name
         });
 
-        if (donors.length > 0) {
-            map.fitBounds(bounds);
-        }
-    }
+        var statusHtml = d.Verified
+            ? '<span style="color:#198754;font-weight:600;">&#10003; Verified</span>'
+            : '<span style="color:#856404;font-weight:600;">&#8987; Pending</span>';
 
-    window.onload = initMap;
+        var iw = new google.maps.InfoWindow({
+            content:
+                '<div style="font-family:Segoe UI,sans-serif;min-width:190px;padding:4px 0;">' +
+                '<div style="font-size:1rem;font-weight:700;margin-bottom:6px;">' + (d.Name || '—') + '</div>' +
+                '<div style="font-size:0.82rem;margin-bottom:3px;">Status: ' + statusHtml + '</div>' +
+                '<div style="font-size:0.82rem;margin-bottom:3px;">Blood: <strong style="color:#8B0000;">' + (d.BloodGroup || 'N/A') + '</strong></div>' +
+                (d.LocationText ? '<div style="font-size:0.82rem;color:#666;">&#128205; ' + d.LocationText + '</div>' : '') +
+                (d.Concent ? '<div style="font-size:0.82rem;margin-top:4px;">&#128222; ' + d.Phone + '</div>' : '') +
+                '</div>'
+        });
+
+        marker.addListener('click', function() {
+            if (openIW) openIW.close();
+            iw.open(_map, marker);
+            openIW = iw;
+        });
+
+        bounds.extend({ lat: lat, lng: lng });
+        hasPoints = true;
+        _markerEntries.push({ marker: marker, lat: lat, lng: lng });
+    });
+
+    // ── Blood bank markers (blue) ──
+    banks.forEach(function(b) {
+        var lat = Number(b.Lat), lng = Number(b.Lng);
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+        var marker = new google.maps.Marker({
+            position: { lat: lat, lng: lng },
+            map: _map,
+            icon: {
+                path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z',
+                fillColor: '#1a6fc4',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 1.5,
+                scale: 1.4,
+                anchor: new google.maps.Point(12, 22)
+            },
+            title: b.LocationName
+        });
+
+        var iw = new google.maps.InfoWindow({
+            content:
+                '<div style="font-family:Segoe UI,sans-serif;min-width:200px;padding:4px 0;">' +
+                '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+                '<span style="background:#1a6fc4;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;">&#127973;</span>' +
+                '<strong style="font-size:1rem;">' + b.LocationName + '</strong>' +
+                '</div>' +
+                (b.Address ? '<div style="font-size:0.82rem;color:#555;margin-bottom:2px;">&#128205; ' + b.Address + '</div>' : '') +
+                '<div style="font-size:0.78rem;color:#1a6fc4;font-weight:600;margin-top:4px;">Blood Bank</div>' +
+                '</div>'
+        });
+
+        marker.addListener('click', function() {
+            if (openIW) openIW.close();
+            iw.open(_map, marker);
+            openIW = iw;
+        });
+
+        bounds.extend({ lat: lat, lng: lng });
+        hasPoints = true;
+    });
+
+    if (hasPoints) _map.fitBounds(bounds);
+
+    // ── Places Autocomplete for location search ──────────────────────────────
+    var input = document.getElementById('locationSearchInput');
+    var ac = new google.maps.places.Autocomplete(input, {
+        types: ['geocode'],
+        componentRestrictions: { country: 'lk' }
+    });
+    ac.setFields(['geometry', 'name', 'formatted_address']);
+
+    ac.addListener('place_changed', function() {
+        var place = ac.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+            alert('Location not found. Please select from the suggestions.');
+            return;
+        }
+
+        _searchCenter = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+        };
+
+        var label = place.name || place.formatted_address || input.value;
+        document.getElementById('locationFilterText').textContent = label;
+        document.getElementById('locationFilterBadge').style.display = 'inline-flex';
+        document.getElementById('clearLocationBtn').style.display   = 'inline-flex';
+
+        // Pan map to searched location
+        _map.setCenter(_searchCenter);
+        _map.setZoom(11);
+
+        rcApplyLocationFilter();
+    });
+}
 </script>
+}

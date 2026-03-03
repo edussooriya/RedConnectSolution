@@ -1,43 +1,193 @@
-﻿@using RedConnect.ViewModels
+@using RedConnect.ViewModels
 @model BloodBankViewModel
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Register Blood Bank";
 }
 
-<h2>Create Blood Bank</h2>
+<div class="rc-page-header">
+    <h1><i class="fas fa-hospital" style="color:var(--rc-red);"></i> Register Blood Bank</h1>
+    <p>Add a new blood bank location and assign staff credentials</p>
+</div>
 
-<form asp-action="RegisterBank" method="post">
-
-    <div>
-        <label>Location Name</label>
-        <input asp-for="LocationName" class="form-control" />
+<div class="rc-card" style="max-width:720px;">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-plus-circle" style="color:var(--rc-red);"></i> Bank Details</h3>
     </div>
+    <div class="rc-card__body">
+        <form asp-action="RegisterBank" method="post">
+            <!-- ── Bank Info ── -->
+            <p class="text-muted mb-3" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">
+                Bank Information
+            </p>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-hospital-alt"></i> Location Name</label>
+                    <input asp-for="LocationName" class="rc-input" placeholder="e.g., Colombo National Hospital" required />
+                </div>
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-map-marker-alt"></i> Address</label>
+                    <input asp-for="Address" class="rc-input" placeholder="Full address" required />
+                </div>
+            </div>
 
-    <div>
-        <label>Address</label>
-        <input asp-for="Address" class="form-control" />
+            <!-- ── Map Location ── -->
+            <hr style="border-color:var(--rc-gray-200);margin:0 0 1.5rem;">
+            <p class="text-muted mb-3" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">
+                <i class="fas fa-map-pin" style="color:var(--rc-red);"></i> Map Location
+            </p>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-location-crosshairs"></i> Search Location on Map</label>
+                    <div class="rc-input-wrap">
+                        <input asp-for="LocationSearch" class="rc-input" id="bankLocationSearch"
+                               placeholder="Type location (e.g., Colombo National Hospital, Colombo 08)"
+                               autocomplete="off" style="padding-right:2.5rem;" />
+                        <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:var(--rc-gray-400);pointer-events:none;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                    <input asp-for="Lat" type="hidden" id="bankLat" />
+                    <input asp-for="Lng" type="hidden" id="bankLng" />
+                </div>
+                <div class="col-12">
+                    <div id="bankMapPreview" style="
+                        height:280px;border-radius:0.75rem;overflow:hidden;
+                        border:1px solid var(--rc-gray-200);display:none;">
+                    </div>
+                    <div id="bankMapPlaceholder" style="
+                        height:280px;border-radius:0.75rem;
+                        border:2px dashed var(--rc-gray-200);background:var(--rc-gray-50);
+                        display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        color:var(--rc-gray-400);gap:0.5rem;">
+                        <i class="fas fa-map" style="font-size:2rem;"></i>
+                        <span style="font-size:0.875rem;">Search a location to pin the blood bank on the map</span>
+                    </div>
+                    <div id="bankCoordsBadge" style="display:none;margin-top:0.5rem;">
+                        <span class="rc-badge rc-badge--verified">
+                            <i class="fas fa-circle-check"></i>
+                            <span id="bankCoordsText">Location pinned</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Staff Credentials ── -->
+            <hr style="border-color:var(--rc-gray-200);margin:0 0 1.5rem;">
+            <p class="text-muted mb-3" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">
+                Staff Credentials
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-envelope"></i> Staff Email</label>
+                    <input asp-for="StaffEmail" class="rc-input" type="email" placeholder="staff@hospital.lk" required />
+                    <span asp-validation-for="StaffEmail" style="color:#dc3545; font-size:0.8rem;"></span>
+                </div>
+                <div class="col-md-6">
+                    <label class="rc-form-label"><i class="fas fa-lock"></i> Password</label>
+                    <div class="rc-input-wrap">
+                        <input asp-for="Password" type="password" class="rc-input"
+                               placeholder="Set a password" style="padding-right:3rem;" required />
+                        <span class="rc-pwd-toggle" onclick="rcTogglePwd('Password','bankPwdIcon')">
+                            <i class="fas fa-eye" id="bankPwdIcon"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="rc-form-label"><i class="fas fa-user-tag"></i> User Type</label>
+                    <select asp-for="SelectedUserTypeId"
+                            asp-items="@(new SelectList(Model.UserTypes, "UserTypeId", "UserTypeName"))"
+                            class="rc-select" required>
+                        <option value="">-- Select User Type --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="rc-btn rc-btn--primary">
+                    <i class="fas fa-save"></i> Register Bank
+                </button>
+                <a href="/Portal/BankList" class="rc-btn rc-btn--outline ms-2">Cancel</a>
+            </div>
+        </form>
     </div>
+</div>
 
-    <div>
-        <label>Staff Email</label>
-        <input asp-for="StaffEmail" class="form-control" />
-        <span asp-validation-for="StaffEmail" class="text-danger"></span>
-    </div>
+@section Scripts {
+<script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=initBankAutocomplete" async defer></script>
+<script>
+var _bankMap, _bankMarker;
 
-    <div>
-        <label>Password</label>
-        <input asp-for="Password" type="password" class="form-control" />
-    </div>
+function initBankAutocomplete() {
+    const input = document.getElementById('bankLocationSearch');
+    if (!input) return;
 
-    <div>
-        <label>User Type</label>
-        <select asp-for="SelectedUserTypeId"
-                asp-items="@(new SelectList(Model.UserTypes, "UserTypeId", "UserTypeName"))"
-                class="form-control">
-            <option value="">-- Select User Type --</option>
-        </select>
-    </div>
+    const ac = new google.maps.places.Autocomplete(input, {
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: 'lk' }
+    });
 
-    <button type="submit" class="btn btn-primary">Save</button>
-</form>
+    ac.addListener('place_changed', function () {
+        const place = ac.getPlace();
+        if (!place.geometry) {
+            alert('No location details found. Please select from the suggestions.');
+            return;
+        }
+
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        document.getElementById('bankLat').value = lat;
+        document.getElementById('bankLng').value = lng;
+
+        // Update badge
+        document.getElementById('bankCoordsText').textContent =
+            lat.toFixed(5) + ', ' + lng.toFixed(5);
+        document.getElementById('bankCoordsBadge').style.display = 'block';
+
+        // Show map
+        document.getElementById('bankMapPlaceholder').style.display = 'none';
+        const mapDiv = document.getElementById('bankMapPreview');
+        mapDiv.style.display = 'block';
+
+        if (!_bankMap) {
+            _bankMap = new google.maps.Map(mapDiv, {
+                zoom: 15,
+                center: { lat: lat, lng: lng },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false
+            });
+            _bankMarker = new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: _bankMap,
+                icon: {
+                    path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                    fillColor: '#1a6fc4',
+                    fillOpacity: 1,
+                    strokeColor: '#ffffff',
+                    strokeWeight: 2,
+                    scale: 6
+                },
+                title: place.name
+            });
+        } else {
+            const pos = { lat: lat, lng: lng };
+            _bankMap.setCenter(pos);
+            _bankMap.setZoom(15);
+            _bankMarker.setPosition(pos);
+        }
+    });
+}
+
+function rcTogglePwd(id, iconId) {
+    const inp = document.getElementById(id);
+    const ico = document.getElementById(iconId);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    ico.classList.toggle('fa-eye', !isPass);
+    ico.classList.toggle('fa-eye-slash', isPass);
+}
+</script>
+}
