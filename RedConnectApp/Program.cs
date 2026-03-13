@@ -22,6 +22,8 @@ builder.Services.AddDbContext<MSSQLDBContext>(options =>
 builder.Services.AddScoped<MongoRepository>();
 builder.Services.AddScoped<DonorMapService>();
 builder.Services.AddScoped<DataSeeder>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<PasswordResetService>();
 
 var app = builder.Build();
 

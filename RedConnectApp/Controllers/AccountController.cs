@@ -3,16 +3,19 @@ using RedConnect.DAL;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 using RedConnectApp.Enums;
+using RedConnectApp.Services;
 
 namespace RedConnect.Controllers;
 
 public class AccountController : Controller
 {
     private readonly MongoRepository _repo;
+    private readonly PasswordResetService _passwordResetService;
 
-    public AccountController(MongoRepository repo)
+    public AccountController(MongoRepository repo, PasswordResetService passwordResetService)
     {
         _repo = repo;
+        _passwordResetService = passwordResetService;
     }
 
     public IActionResult Register() => View();
@@ -258,5 +261,41 @@ public class AccountController : Controller
         await _repo.ChangePasswordAsync(userId.Value, model.NewPassword);
         ViewBag.Success = "Password changed successfully.";
         return View();
+    }
+    public IActionResult ForgotPassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public IActionResult ForgotPassword(string email)
+    {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+        _passwordResetService.SendResetLink(email, baseUrl);
+
+        ViewBag.Message = "Reset link sent to email";
+
+        return View();
+    }
+
+    public IActionResult ResetPassword(string token)
+    {
+        ViewBag.Token = token;
+        return View();
+    }
+
+    [HttpPost]
+    public IActionResult ResetPassword(string token, string password)
+    {
+        var result = _passwordResetService.ResetPassword(token, password);
+
+        if (!result)
+        {
+            ViewBag.Error = "Invalid or expired token";
+            return View();
+        }
+
+        return RedirectToAction("Login");
     }
 }
