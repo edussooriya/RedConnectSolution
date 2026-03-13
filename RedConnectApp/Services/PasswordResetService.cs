@@ -42,7 +42,7 @@ namespace RedConnectApp.Services
         public bool ResetPassword(string token, string newPassword)
         {
             var reset = _context.PasswordResetTokens
-                .FirstOrDefault(x => x.Token == token && x.Expiry > DateTime.Now);
+         .FirstOrDefault(x => x.Token == token && x.Expiry > DateTime.Now);
 
             if (reset == null)
                 return false;
@@ -52,7 +52,7 @@ namespace RedConnectApp.Services
             if (user == null)
                 return false;
 
-            user.Password = newPassword;
+            user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
             _context.PasswordResetTokens.Remove(reset);
 
