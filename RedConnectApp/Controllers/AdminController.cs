@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using RedConnect.DAL;
+using RedConnect.Models;
 using RedConnect.ViewModels;
 using RedConnectApp.DAL;
+using RedConnectApp.Models;
+using RedConnectApp.ViewModels;
 
 namespace RedConnect.Controllers;
 
@@ -10,11 +14,15 @@ public class AdminController : Controller
 {
     private readonly MongoRepository _repo;
     private readonly MSSQLDBContext  _context;
+    private readonly DonorMapService _mapService;
 
-    public AdminController(MongoRepository repo, MSSQLDBContext context)
+
+    public AdminController(MongoRepository repo, MSSQLDBContext context, DonorMapService mapService)
     {
         _repo    = repo;
         _context = context;
+        _mapService = mapService;
+
     }
 
     private bool IsAdmin() =>
@@ -173,5 +181,76 @@ public class AdminController : Controller
             await _repo.ReactivateUserAsync(userId);
 
         return RedirectToAction("UserList");
+    }
+
+    [HttpGet]
+    public IActionResult Donate()
+    {
+        return View(new DonateViewModel());
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SearchUser(DonateViewModel model)
+    {
+        var user = await _repo.GetMongoUserAsync(model.UserId);
+       
+        if (user == null)
+        {
+            ModelState.AddModelError("", "User not found");
+            return View("Donate", model);
+        }
+
+        model.Name = user.UserDetails.Name;
+        model.BloodGroup = user.BloodGroup;
+        model.UserFound = true;
+
+        model.History = user.Donate_History?
+            .OrderByDescending(x => x.Date)
+            .ToList();
+
+        model.Donation_Num = user.Donate_History?.Count + 1 ?? 1;
+
+        return View("Donate", model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Donate(DonateViewModel model)
+    {
+        var user = await _repo.GetMongoUserAsync(model.UserId);
+
+        if (user == null)
+            return NotFound();
+
+        var lastDonation = user.Donate_History?
+            .OrderByDescending(x => x.Date)
+            .FirstOrDefault();
+
+        if (lastDonation != null)
+        {
+            var months = (DateTime.Now - lastDonation.Date).TotalDays;
+
+            if (months < 120)
+            {
+                TempData["Error"] = "User cannot donate yet.";
+                return RedirectToAction("Donate");
+            }
+        }
+
+        var donation = new DonateHistory
+        {
+            Donation_Num = user.Donate_History?.Count + 1 ?? 1,
+            Date = model.Date,
+            Location = new DonateLocation
+            {
+                Lat = model.Lat,
+                Lon = model.Lon
+            }
+        };
+
+
+        await _repo.Donate(model.UserId,donation);
+        TempData["Success"] = "Donation recorded successfully";
+
+        return RedirectToAction("Donate");
     }
 }

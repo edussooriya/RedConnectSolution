@@ -1,0 +1,179 @@
+﻿@using RedConnectApp.ViewModels
+@model DonateViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Donate";
+}
+
+<h2>Record Blood Donation</h2>
+
+<form asp-action="SearchUser" method="post">
+    <label>User ID</label>
+    <input asp-for="UserId" />
+    <button type="submit">Search</button>
+</form>
+
+@if (Model.UserFound)
+{
+    <h3>@Model.Name</h3>
+    <p>Blood Group: @Model.BloodGroup</p>
+
+    <form asp-action="Donate" method="post">
+
+        <input type="hidden" asp-for="UserId" />
+
+        <label>Date</label>
+        <input asp-for="Date" type="date" />
+
+        <label>Location</label>
+        <input asp-for="LocationText" id="locationSearch" placeholder="Search location" />
+
+        <input asp-for="Lat" id="lat" hidden />
+        <input asp-for="Lon" id="lon" hidden />
+
+        <div id="map" style="height:400px"></div>
+
+        <button type="submit">Record Donation</button>
+
+    </form>
+}
+
+@if (Model.History != null)
+{
+    <h3>Donation History</h3>
+
+    <table class="table">
+        <tr>
+            <th>No</th>
+            <th>Date</th>
+            <th>Location</th>
+        </tr>
+
+        @foreach (var item in Model.History)
+        {
+            <tr>
+                <td>@item.Donation_Num</td>
+                <td>@item.Date.ToShortDateString()</td>
+                <td>
+                    <a href="https://maps.google.com/?q=@item.Location.Lat,@item.Location.Lon" target="_blank">
+                        View Map
+                    </a>
+                </td>
+            </tr>
+        }
+    </table>
+}
+
+@section Scripts {
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=initMap" async defer></script>
+
+    <script>
+
+               let map;
+        let marker;
+        let autocomplete;
+
+        function initMap(){
+
+            const mapElement = document.getElementById("map");
+
+            if(!mapElement){
+                console.log("Map element not found");
+                return;
+            }
+
+            let defaultPos = { lat: 7.8731, lng: 80.7718 };
+
+            map = new google.maps.Map(mapElement,{
+                zoom:7,
+                center:defaultPos
+            });
+
+            marker = new google.maps.Marker({
+                position:defaultPos,
+                map:map,
+                draggable:true
+            });
+
+            initAutocomplete();
+
+            if(navigator.geolocation){
+
+                navigator.geolocation.getCurrentPosition(function(position){
+
+                    let pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    map.setCenter(pos);
+                    marker.setPosition(pos);
+
+                    updateLocation(pos);
+
+                });
+
+            }
+
+            marker.addListener("dragend",function(){
+
+                let p = marker.getPosition();
+
+                updateLocation({
+                    lat:p.lat(),
+                    lng:p.lng()
+                });
+
+            });
+
+        }
+
+        function initAutocomplete(){
+
+                const input = document.getElementById("locationSearch");
+
+                if (!input) return;
+
+                autocomplete = new google.maps.places.Autocomplete(input);
+
+                autocomplete.addListener("place_changed",function(){
+
+                       const place = autocomplete.getPlace();
+
+                        if(!place.geometry) return;
+
+                        const location = {
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        };
+
+                        if(map){
+                            map.setCenter(location);
+                            map.setZoom(15);
+                        }
+
+                        if(marker){
+                            marker.setPosition(location);
+                        }
+
+                        updateLocation(location);
+
+            });
+
+        }
+
+        function updateLocation(pos){
+
+            document.getElementById("lat").value = pos.lat;
+            document.getElementById("lon").value = pos.lng;
+
+        }
+
+         
+
+    </script>
+
+}

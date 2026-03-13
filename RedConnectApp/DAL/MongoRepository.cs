@@ -11,7 +11,7 @@ namespace RedConnect.DAL;
 public class MongoRepository
 {
     private readonly MSSQLDBContext _context;
-    private readonly IMongoCollection<MongoUser> _mongoCollection;
+    private readonly IMongoCollection<MongoUser> _userCollection;
     private readonly IMongoCollection<BloodBankDetails> _bloodBankCollection;
     private readonly IMongoDatabase _db;
 
@@ -20,7 +20,7 @@ public class MongoRepository
         _context = context;
         var client = new MongoClient(config["Mongo:Connection"]);
         _db = client.GetDatabase(config["Mongo:Database"]);
-        _mongoCollection      = _db.GetCollection<MongoUser>("Users");
+        _userCollection      = _db.GetCollection<MongoUser>("Users");
         _bloodBankCollection  = _db.GetCollection<BloodBankDetails>("BloodBankDetails");
     }
 
@@ -115,7 +115,7 @@ public class MongoRepository
             BloodGroup = bloodGroup
         };
 
-        await _mongoCollection.InsertOneAsync(mongoUser);
+        await _userCollection.InsertOneAsync(mongoUser);
     }
 
     public async Task<MsSqlUser?> LoginAsync(string email, string password)
@@ -177,7 +177,7 @@ public class MongoRepository
             .Set(x => x.AvailableLocation, new GeoLocation { Coordinates = new[] { availableLng, availableLat } })
             .SetOnInsert(x => x.CreatedOn, DateTime.UtcNow);
 
-        await _mongoCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
+        await _userCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
     }
 
     public async Task<MsSqlUser?> GetByIdAsync(int userId)
@@ -188,7 +188,7 @@ public class MongoRepository
     public async Task<MongoUser?> GetMongoUserAsync(int userId)
     {
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-        return await _mongoCollection.Find(filter).FirstOrDefaultAsync();
+        return await _userCollection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<List<MongoUser>> GetUnverifiedDonorsAsync()
@@ -200,7 +200,7 @@ public class MongoRepository
                  Builders<MongoUser>.Filter.Exists("Verified", false)
         ));
 
-        var users = await _mongoCollection.Find(filter).ToListAsync();
+        var users = await _userCollection.Find(filter).ToListAsync();
         return users;
     }
 
@@ -212,7 +212,7 @@ public class MongoRepository
             .Set(x => x.Verified, true)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
 
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task CreateBloodBankAsync(
@@ -276,7 +276,7 @@ public class MongoRepository
             .Set(x => x.MedicalReports,    reports)
             .Set(x => x.DocumentsUploaded, true)
             .Set(x => x.LastUpdatedOn,     DateTime.UtcNow);
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task UpdateMedicalReportStatusAsync(
@@ -292,7 +292,7 @@ public class MongoRepository
         var update = Builders<MongoUser>.Update
             .Set(x => x.MedicalReports, user.MedicalReports)
             .Set(x => x.LastUpdatedOn,  DateTime.UtcNow);
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task ReuploadMedicalReportAsync(int userId, int docIndex, string filePath)
@@ -308,7 +308,7 @@ public class MongoRepository
         var update = Builders<MongoUser>.Update
             .Set(x => x.MedicalReports, user.MedicalReports)
             .Set(x => x.LastUpdatedOn,  DateTime.UtcNow);
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task CreateOrUpdateBloodBankAsync(
@@ -390,7 +390,7 @@ public class MongoRepository
     public async Task<List<MongoUser>> GetAllDonorsAsync()
     {
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserType, 0);
-        return await _mongoCollection.Find(filter).ToListAsync();
+        return await _userCollection.Find(filter).ToListAsync();
     }
 
     public async Task<List<BloodBankDetails>> GetAllBloodBanksAsync()
@@ -414,7 +414,7 @@ public class MongoRepository
         var update = Builders<MongoUser>.Update
             .Set(x => x.Active, false)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task<bool> VerifyPasswordAsync(int userId, string password)
@@ -435,7 +435,7 @@ public class MongoRepository
 
     public async Task<List<MongoUser>> GetAllMongoUsersAsync()
     {
-        return await _mongoCollection
+        return await _userCollection
             .Find(FilterDefinition<MongoUser>.Empty)
             .ToListAsync();
     }
@@ -454,7 +454,7 @@ public class MongoRepository
         var update = Builders<MongoUser>.Update
             .Set(x => x.Active, true)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
-        await _mongoCollection.UpdateOneAsync(filter, update);
+        await _userCollection.UpdateOneAsync(filter, update);
     }
 
     public async Task AdminCreateUserAsync(
@@ -496,7 +496,7 @@ public class MongoRepository
             LocationText      = locationText ?? string.Empty,
             BloodGroup        = bloodGroup  ?? string.Empty
         };
-        await _mongoCollection.InsertOneAsync(mongoUser);
+        await _userCollection.InsertOneAsync(mongoUser);
     }
 
     public async Task<(long TotalDonors, long VerifiedDonors, long TotalBanks)> GetDashboardStatsAsync()
@@ -510,10 +510,17 @@ public class MongoRepository
             Builders<MongoUser>.Filter.Eq(x => x.Verified, true)
         );
 
-        var totalDonors    = await _mongoCollection.CountDocumentsAsync(donorFilter);
-        var verifiedDonors = await _mongoCollection.CountDocumentsAsync(verifiedFilter);
+        var totalDonors    = await _userCollection.CountDocumentsAsync(donorFilter);
+        var verifiedDonors = await _userCollection.CountDocumentsAsync(verifiedFilter);
         var totalBanks     = await _bloodBankCollection.CountDocumentsAsync(FilterDefinition<BloodBankDetails>.Empty);
 
         return (totalDonors, verifiedDonors, totalBanks);
+    }
+
+    public async Task Donate(int userId, object donation)
+    {
+        var update = Builders<MongoUser>.Update.Push(x => x.Donate_History, donation);
+
+        await _userCollection.UpdateOneAsync(x => x.UserId == userId, update);
     }
 }

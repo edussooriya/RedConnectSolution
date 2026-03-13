@@ -2,6 +2,7 @@ using System;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using RedConnectApp.Enums;
+using RedConnectApp.Models;
 
 namespace RedConnect.Models;
 
@@ -26,6 +27,8 @@ public class MongoUser
     public bool Verified { get; set; }
     public bool DocumentsUploaded { get; set; }
     public List<MedicalReport> MedicalReports { get; set; } = new();
+
+    public List<DonateHistory> Donate_History { get; set; } = new();
 }
 
 public class MedicalReport
