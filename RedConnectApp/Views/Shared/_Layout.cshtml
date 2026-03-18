@@ -1,10 +1,11 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Config
 @{
-    var ctrl   = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower();
     var action = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower();
 
     Func<string, string, string> navClass = (c, a) =>
         ctrl == c.ToLower() && (a == "*" || action == a.ToLower()) ? "active" : "";
+    var userTypeId = Context.Session.GetInt32("UserTypeId");
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -29,49 +30,64 @@
             <div class="rc-sidebar__nav">
                 <div class="rc-nav-section">General</div>
 
-                <a href="/Dashboard" class="rc-nav-link @navClass("Dashboard","Index")">
-                    <i class="fas fa-gauge-high"></i> Dashboard
-                </a>
+
+                @if (userTypeId != null && userTypeId != 0)
+                {
+                    <a href="/Dashboard" class="rc-nav-link @navClass("Dashboard", "Index")">
+                        <i class="fas fa-gauge-high"></i> Dashboard
+                    </a>
+                    
+                }
                 <a href="/Account/Edit?id=@Context.Session.GetInt32("UserId")"
-                   class="rc-nav-link @navClass("Account","Edit")">
+                   class="rc-nav-link @navClass("Account", "Edit")">
                     <i class="fas fa-user-circle"></i> My Profile
                 </a>
-                <a href="/Map/Donors" class="rc-nav-link @navClass("Map","Donors")">
+                <a href="/Map/Donors" class="rc-nav-link @navClass("Map", "Donors")">
                     <i class="fas fa-map-marked-alt"></i> Donor Map
                 </a>
-                <a href="/Account/ChangePassword" class="rc-nav-link @navClass("Account","ChangePassword")">
-                    <i class="fas fa-lock"></i> Change Password
-                </a>
 
-                @{
-                    var userTypeId = Context.Session.GetInt32("UserTypeId");
+
+                @if (userTypeId != null && userTypeId != 0)
+                {
+                    <a href="/Account/ChangePassword" class="rc-nav-link @navClass("Account", "ChangePassword")">
+                        <i class="fas fa-lock"></i> Change Password
+                    </a>
                 }
+
                 @if (userTypeId != null && userTypeId != 0)
                 {
                     <div class="rc-nav-section">Admin</div>
-                    <a href="/Admin/UserList" class="rc-nav-link @navClass("Admin","UserList")">
+                    <a href="/Admin/UserList" class="rc-nav-link @navClass("Admin", "UserList")">
                         <i class="fas fa-users-cog"></i> User Management
                     </a>
-                    <a href="/Admin/CreateUser" class="rc-nav-link @navClass("Admin","CreateUser")">
+                    <a href="/Admin/CreateUser" class="rc-nav-link @navClass("Admin", "CreateUser")">
                         <i class="fas fa-user-plus"></i> Create User
                     </a>
-                    <a href="/Portal/DonorList" class="rc-nav-link @navClass("Portal","DonorList")">
+                    <a href="/Portal/DonorList" class="rc-nav-link @navClass("Portal", "DonorList")">
                         <i class="fas fa-list-check"></i> Donor List
                     </a>
-                    <a href="/Portal/BankList" class="rc-nav-link @navClass("Portal","BankList")">
+                    <a href="/Portal/BankList" class="rc-nav-link @navClass("Portal", "BankList")">
                         <i class="fas fa-hospital"></i> Blood Banks
                     </a>
-                    <a href="/Portal/RegisterBank" class="rc-nav-link @navClass("Portal","RegisterBank")">
+                    <a href="/Portal/RegisterBank" class="rc-nav-link @navClass("Portal", "RegisterBank")">
                         <i class="fas fa-plus-circle"></i> Register Bank
                     </a>
+
+                    <a href="/Admin/Donate" class="rc-nav-link @navClass("Admin", "Donate")">
+                        <i class="fas fa-plus-circle"></i> Search Donor
+                    </a>
+
                 }
             </div>
 
-            <div class="rc-sidebar__footer">
-                <a href="/Account/Logout" class="rc-btn rc-btn--logout w-100 justify-content-center">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </a>
-            </div>
+            @if (userTypeId != null && userTypeId != 0)
+            {
+                <div class="rc-sidebar__footer">
+                    <a href="/Account/Logout" class="rc-btn rc-btn--logout w-100 justify-content-center">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </a>
+                </div>
+            }
         </nav>
 
         <!-- Main content -->

@@ -7,63 +7,123 @@
     ViewData["Title"] = "Donate";
 }
 
-<h2>Record Blood Donation</h2>
+<div class="rc-page-header">
+    <h1><i class="fas fa-hand-holding-droplet" style="color:var(--rc-red);"></i> Record Blood Donation</h1>
+    <p>Search donor and record a new donation</p>
+</div>
 
-<form asp-action="SearchUser" method="post">
-    <label>User ID</label>
-    <input asp-for="UserId" />
-    <button type="submit">Search</button>
-</form>
+<div class="rc-card" style="max-width:800px;">
+    <div class="rc-card__header">
+        <h3><i class="fas fa-magnifying-glass" style="color:var(--rc-red);"></i> Search Donor</h3>
+    </div>
+    <div class="rc-card__body">
 
-@if (Model.UserFound)
-{
-    <h3>@Model.Name</h3>
-    <p>Blood Group: @Model.BloodGroup</p>
+        <form asp-action="SearchUser" method="post" class="mb-4">
+            <label class="rc-form-label">User ID</label>
+            <div class="d-flex gap-2">
+                <input asp-for="UserId" class="rc-input" placeholder="Enter User ID" />
+                <button type="submit" class="rc-btn rc-btn--primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
 
-    <form asp-action="Donate" method="post">
-
-        <input type="hidden" asp-for="UserId" />
-
-        <label>Date</label>
-        <input asp-for="Date" type="date" />
-
-        <label>Location</label>
-        <input asp-for="LocationText" id="locationSearch" placeholder="Search location" />
-
-        <input asp-for="Lat" id="lat" hidden />
-        <input asp-for="Lon" id="lon" hidden />
-
-        <div id="map" style="height:400px"></div>
-
-        <button type="submit">Record Donation</button>
-
-    </form>
-}
-
-@if (Model.History != null)
-{
-    <h3>Donation History</h3>
-
-    <table class="table">
-        <tr>
-            <th>No</th>
-            <th>Date</th>
-            <th>Location</th>
-        </tr>
-
-        @foreach (var item in Model.History)
+        @if (Model.UserFound)
         {
-            <tr>
-                <td>@item.Donation_Num</td>
-                <td>@item.Date.ToShortDateString()</td>
-                <td>
-                    <a href="https://maps.google.com/?q=@item.Location.Lat,@item.Location.Lon" target="_blank">
-                        View Map
-                    </a>
-                </td>
-            </tr>
+            <div class="rc-alert rc-alert--success mb-3">
+                <i class="fas fa-circle-check"></i>
+                <strong>@Model.Name</strong> found (Blood Group: @Model.BloodGroup)
+            </div>
+
+            <form asp-action="Donate" method="post">
+
+                <input type="hidden" asp-for="UserId" />
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="rc-form-label"><i class="fas fa-calendar"></i> Date</label>
+                        <input asp-for="Date" type="date" class="rc-input" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="rc-form-label">
+                            <i class="fas fa-location-dot"></i> Donation Location
+                        </label>
+                        <div class="rc-input-wrap">
+                            <input asp-for="LocationText"
+                                   id="locationSearch"
+                                   class="rc-input"
+                                   placeholder="Search location (e.g. Colombo)"
+                                   style="padding-right:2.5rem;" />
+                            <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:var(--rc-gray-400);">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <input asp-for="Lat" id="lat" type="hidden" />
+                    <input asp-for="Lon" id="lon" type="hidden" />
+
+                    <!-- Map -->
+                    <div class="col-12">
+                        <div id="map" style="
+                                height:300px;
+                                border-radius:0.75rem;
+                                border:1px solid var(--rc-gray-200);
+                                overflow:hidden;">
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="rc-btn rc-btn--primary">
+                        <i class="fas fa-droplet"></i> Record Donation
+                    </button>
+                </div>
+
+            </form>
         }
-    </table>
+    </div>
+</div>
+
+@if (Model.History != null && Model.History.Any())
+{
+    <div class="rc-card mt-4">
+        <div class="rc-card__header">
+            <h3><i class="fas fa-clock-rotate-left" style="color:var(--rc-red);"></i> Donation History</h3>
+        </div>
+        <div class="rc-card__body">
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.History)
+                    {
+                        <tr>
+                            <td>@item.Donation_Num</td>
+                            <td>@item.Date.ToShortDateString()</td>
+                            <td>
+                                <a href="https://maps.google.com/?q=@item.Location.Lat,@item.Location.Lon"
+                                   target="_blank"
+                                   class="rc-btn rc-btn--outline rc-btn--sm">
+                                    <i class="fas fa-map"></i> View Map
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    </div>
 }
 
 @section Scripts {
@@ -71,25 +131,23 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=@Config["Google:MapsApiKey"]&libraries=places&callback=initMap" async defer></script>
 
     <script>
-
-               let map;
+        let map;
         let marker;
         let autocomplete;
 
         function initMap(){
 
             const mapElement = document.getElementById("map");
-
-            if(!mapElement){
-                console.log("Map element not found");
-                return;
-            }
+            if(!mapElement) return;
 
             let defaultPos = { lat: 7.8731, lng: 80.7718 };
 
             map = new google.maps.Map(mapElement,{
                 zoom:7,
-                center:defaultPos
+                center:defaultPos,
+                mapTypeControl:false,
+                streetViewControl:false,
+                fullscreenControl:false
             });
 
             marker = new google.maps.Marker({
@@ -101,79 +159,53 @@
             initAutocomplete();
 
             if(navigator.geolocation){
-
                 navigator.geolocation.getCurrentPosition(function(position){
-
                     let pos = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     };
-
                     map.setCenter(pos);
                     marker.setPosition(pos);
-
                     updateLocation(pos);
-
                 });
-
             }
 
             marker.addListener("dragend",function(){
-
                 let p = marker.getPosition();
-
                 updateLocation({
                     lat:p.lat(),
                     lng:p.lng()
                 });
-
             });
-
         }
 
         function initAutocomplete(){
+            const input = document.getElementById("locationSearch");
+            if (!input) return;
 
-                const input = document.getElementById("locationSearch");
+            autocomplete = new google.maps.places.Autocomplete(input);
 
-                if (!input) return;
+            autocomplete.addListener("place_changed",function(){
 
-                autocomplete = new google.maps.places.Autocomplete(input);
+                const place = autocomplete.getPlace();
+                if(!place.geometry) return;
 
-                autocomplete.addListener("place_changed",function(){
+                const location = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
 
-                       const place = autocomplete.getPlace();
+                map.setCenter(location);
+                map.setZoom(15);
+                marker.setPosition(location);
 
-                        if(!place.geometry) return;
-
-                        const location = {
-                            lat: place.geometry.location.lat(),
-                            lng: place.geometry.location.lng()
-                        };
-
-                        if(map){
-                            map.setCenter(location);
-                            map.setZoom(15);
-                        }
-
-                        if(marker){
-                            marker.setPosition(location);
-                        }
-
-                        updateLocation(location);
-
+                updateLocation(location);
             });
-
         }
 
         function updateLocation(pos){
-
             document.getElementById("lat").value = pos.lat;
             document.getElementById("lon").value = pos.lng;
-
         }
-
-         
-
     </script>
-
 }
