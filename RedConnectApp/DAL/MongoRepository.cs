@@ -1,16 +1,20 @@
-﻿using BCrypt.Net;
+﻿using System.Collections;
+using System.Linq.Expressions;
+using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnectApp.DAL;
 using RedConnectApp.Enums;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace RedConnect.DAL;
 
-public class MongoRepository
+public class MongoRepository : IMongoRepository
 {
-    private readonly MSSQLDBContext _context;
+    private readonly IAppDbContext _context;
     private readonly IMongoCollection<MongoUser> _userCollection;
     private readonly IMongoCollection<BloodBankDetails> _bloodBankCollection;
     private readonly IMongoDatabase _db;
@@ -69,126 +73,40 @@ public class MongoRepository
         }
     }
 
-    public async Task RegisterAsync(int userTypeId, string email, string password,
-        string name, string address, string nic,
-        double donatedLng, double donatedLat,
-        double availableLng, double availableLat, string locationSearch, string phone,
-        GenderEnum gender, string bloodGroup)
+    public async Task CreateUserAsync(MongoUser mongoUser)
     {
-        var hashed = BCrypt.Net.BCrypt.HashPassword(password);
-
-        var sqlUser = new MsSqlUser
-        {
-            UserTypeId = userTypeId,
-            Email = email,
-            Password = hashed,
-            Active = true
-        };
-
-        _context.Users.Add(sqlUser);
-        await _context.SaveChangesAsync();
-
-        var mongoUser = new MongoUser
-        {
-            UserId = sqlUser.UserId,
-            UserType = userTypeId,
-            Active = true,
-            CreatedOn = DateTime.UtcNow,
-            LastUpdatedOn = DateTime.UtcNow,
-            UserDetails = new UserDetails
-            {
-                Name = name,
-                Address = address,
-                NIC = nic,
-                Phone = phone,
-                Gender = gender
-            },
-            DonatedLocation = new GeoLocation
-            {
-                Coordinates = new[] { donatedLng, donatedLat }
-            },
-            AvailableLocation = new GeoLocation
-            {
-                Coordinates = new[] { availableLng, availableLat }
-            },
-            LocationText = locationSearch,
-            BloodGroup = bloodGroup
-        };
-
         await _userCollection.InsertOneAsync(mongoUser);
     }
 
-    public async Task<MsSqlUser?> LoginAsync(string email, string password)
+    public async Task CreateBloodBankAsync(BloodBankDetails bloodBank)
     {
-        var user = _context.Users.FirstOrDefault(x => x.Email == email && x.Active);
-
-        if (user == null)
-            return null;
-
-        return BCrypt.Net.BCrypt.Verify(password, user.Password) ? user : null;
+        await _bloodBankCollection.InsertOneAsync(bloodBank);
     }
 
-
-
-    public async Task UpdateAsync(int userId,
-    int userTypeId,
-    string email,
-    bool active,
-    string name,
-    string address,
-    string nic,
-    string phone,
-    double donatedLng,
-    double donatedLat,
-    double availableLng,
-    double availableLat,string locationText, bool concent, string bloodBroup)
+    public async Task UpdateAsync(UpdateDefinition<MongoUser> update, FilterDefinition<MongoUser> filter)
     {
-        // 🔹 Update MSSQL
-        var sqlUser = await _context.Users.FindAsync(userId);
-
-        if (sqlUser == null)
-            return;
-
-        sqlUser.Email = email;
-        sqlUser.UserTypeId = userTypeId;
-        sqlUser.Active = active;
-        sqlUser.LastUpdatedOn = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        // 🔹 Update MongoDB
-        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-
-        var update = Builders<MongoUser>.Update
-            .Set(x => x.UserType, userTypeId)
-            .Set(x => x.Active, active)
-            .Set(x => x.LastUpdatedOn, DateTime.UtcNow)
-            .Set(x => x.UserDetails, new UserDetails
-            {
-                Name    = name,
-                Address = address,
-                NIC     = nic,
-                Phone   = phone
-            })
-            .Set(x => x.LocationText, locationText)
-            .Set(x => x.Concent, concent)
-            .Set(x => x.BloodGroup, bloodBroup)
-            .Set(x => x.DonatedLocation,   new GeoLocation { Coordinates = new[] { donatedLng, donatedLat } })
-            .Set(x => x.AvailableLocation, new GeoLocation { Coordinates = new[] { availableLng, availableLat } })
-            .SetOnInsert(x => x.CreatedOn, DateTime.UtcNow);
-
         await _userCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
     }
 
-    public async Task<MsSqlUser?> GetByIdAsync(int userId)
+    public async Task UpdateAsync(UpdateDefinition<BloodBankDetails> update, FilterDefinition<BloodBankDetails> filter)
     {
-        return await _context.Users.FindAsync(userId);
+        await _bloodBankCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
     }
 
     public async Task<MongoUser?> GetMongoUserAsync(int userId)
     {
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
         return await _userCollection.Find(filter).FirstOrDefaultAsync();
+    }
+
+    public async Task<long> GetUserCount(Expression<Func<MongoUser, bool>> filter)
+    {
+        return await _userCollection.CountDocumentsAsync(filter);
+    }
+
+    public async Task<long> GetBloodBankCount()
+    {
+        return await _bloodBankCollection.CountDocumentsAsync(_ => true);
     }
 
     public async Task<List<MongoUser>> GetUnverifiedDonorsAsync()
@@ -203,6 +121,8 @@ public class MongoRepository
         var users = await _userCollection.Find(filter).ToListAsync();
         return users;
     }
+
+    
 
     public async Task VerifyDonorAsync(int userId)
     {
@@ -258,58 +178,14 @@ public class MongoRepository
             .FirstOrDefaultAsync();
     }
 
-    private static readonly string[] _reportLabels =
-        { "Blood Test Report", "Medical History", "Doctor's Certificate" };
-
-    public async Task SaveMedicalReportsAsync(int userId, List<string> filePaths)
+    public async Task<BloodBankDetails?> GetBloodBankAsync(Expression<Func<BloodBankDetails, bool>> filter)
     {
-        var reports = filePaths.Select((fp, i) => new MedicalReport
-        {
-            Index  = i,
-            Label  = i < _reportLabels.Length ? _reportLabels[i] : $"Document {i + 1}",
-            FilePath = fp,
-            Status = "Pending"
-        }).ToList();
-
-        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-        var update = Builders<MongoUser>.Update
-            .Set(x => x.MedicalReports,    reports)
-            .Set(x => x.DocumentsUploaded, true)
-            .Set(x => x.LastUpdatedOn,     DateTime.UtcNow);
-        await _userCollection.UpdateOneAsync(filter, update);
+        return await _bloodBankCollection
+            .Find(filter)
+            .FirstOrDefaultAsync();
     }
 
-    public async Task UpdateMedicalReportStatusAsync(
-        int userId, int docIndex, string status, string reason = null)
-    {
-        var user = await GetMongoUserAsync(userId);
-        if (user == null || docIndex < 0 || docIndex >= user.MedicalReports.Count) return;
 
-        user.MedicalReports[docIndex].Status         = status;
-        user.MedicalReports[docIndex].RejectedReason = reason;
-
-        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-        var update = Builders<MongoUser>.Update
-            .Set(x => x.MedicalReports, user.MedicalReports)
-            .Set(x => x.LastUpdatedOn,  DateTime.UtcNow);
-        await _userCollection.UpdateOneAsync(filter, update);
-    }
-
-    public async Task ReuploadMedicalReportAsync(int userId, int docIndex, string filePath)
-    {
-        var user = await GetMongoUserAsync(userId);
-        if (user == null || docIndex < 0 || docIndex >= user.MedicalReports.Count) return;
-
-        user.MedicalReports[docIndex].FilePath       = filePath;
-        user.MedicalReports[docIndex].Status         = "Pending";
-        user.MedicalReports[docIndex].RejectedReason = null;
-
-        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-        var update = Builders<MongoUser>.Update
-            .Set(x => x.MedicalReports, user.MedicalReports)
-            .Set(x => x.LastUpdatedOn,  DateTime.UtcNow);
-        await _userCollection.UpdateOneAsync(filter, update);
-    }
 
     public async Task CreateOrUpdateBloodBankAsync(
     string locationName,
@@ -387,9 +263,9 @@ public class MongoRepository
             .AnyAsync(u => u.Email == email);
     }
 
-    public async Task<List<MongoUser>> GetAllDonorsAsync()
+    public async Task<List<MongoUser>> GetAllUsersAsync(Expression<Func<MongoUser, bool>> filter)
     {
-        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserType, 0);
+        //var filter = Builders<MongoUser>.Filter.Eq(x => x.UserType, 0);
         return await _userCollection.Find(filter).ToListAsync();
     }
 
@@ -417,27 +293,22 @@ public class MongoRepository
         await _userCollection.UpdateOneAsync(filter, update);
     }
 
-    public async Task<bool> VerifyPasswordAsync(int userId, string password)
-    {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null) return false;
-        return BCrypt.Net.BCrypt.Verify(password, user.Password);
-    }
+    
 
-    public async Task ChangePasswordAsync(int userId, string newPassword)
-    {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null) return;
-        user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
-        user.LastUpdatedOn = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-    }
+    
 
     public async Task<List<MongoUser>> GetAllMongoUsersAsync()
     {
         return await _userCollection
             .Find(FilterDefinition<MongoUser>.Empty)
             .ToListAsync();
+    }
+
+    public async Task<MongoUser?> GetById(int id)
+    {
+        var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, id);
+        return await _userCollection.Find(filter).FirstOrDefaultAsync();
+            
     }
 
     public async Task ReactivateUserAsync(int userId)

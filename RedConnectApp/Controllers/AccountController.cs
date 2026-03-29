@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RedConnect.DAL;
+using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 using RedConnectApp.Enums;
@@ -9,13 +10,18 @@ namespace RedConnect.Controllers;
 
 public class AccountController : Controller
 {
-    private readonly MongoRepository _repo;
     private readonly PasswordResetService _passwordResetService;
+    private readonly IUserService _userService;
+    private readonly IMedicalReportService _medicalReportService;
+    private readonly IBloodBankService _bankService;
 
-    public AccountController(MongoRepository repo, PasswordResetService passwordResetService)
+    public AccountController(PasswordResetService passwordResetService,
+        IUserService userService, IMedicalReportService medicalReportService, IBloodBankService bankService)
     {
-        _repo = repo;
         _passwordResetService = passwordResetService;
+        _userService = userService;
+        _medicalReportService = medicalReportService;
+        _bankService = bankService;
     }
 
     public IActionResult Register() => View();
@@ -27,7 +33,7 @@ public class AccountController : Controller
         double availableLng, double availableLat, string locationText, string phone,
         GenderEnum gender, string bloodGroup, int userTypeId = 0)
     {
-        await _repo.RegisterAsync(userTypeId, email, password,
+        await _userService.RegisterAsync(userTypeId, email, password,
             name, address, nic,
             donatedLng, donatedLat,
             availableLng, availableLat, locationText, phone, gender, bloodGroup);
@@ -37,8 +43,9 @@ public class AccountController : Controller
 
     public async Task<IActionResult> Login()
     {
-        var (totalDonors, _, totalBanks) = await _repo.GetDashboardStatsAsync();
-        ViewBag.ActiveDonors = totalDonors;
+        var totalDonors = await _userService.GetAllUsersAsync(true, 0); //Active and userType 0 - Donors
+        var totalBanks = await _bankService.GetBloodBankCount();
+        ViewBag.ActiveDonors = totalDonors.Count;
         ViewBag.TotalBanks   = totalBanks;
         return View();
     }
@@ -46,7 +53,7 @@ public class AccountController : Controller
     [HttpPost]
     public async Task<IActionResult> Login(string email, string password)
     {
-        var user = await _repo.LoginAsync(email, password);
+        var user = await _userService.LoginAsync(email, password);
 
         if (user == null)
         {
@@ -60,7 +67,7 @@ public class AccountController : Controller
         // Donors must upload documents and be verified before accessing the app
         if (user.UserTypeId == 0)
         {
-            var mongoUser = await _repo.GetMongoUserAsync(user.UserId);
+            var mongoUser = await _userService.GetUserById(user.UserId);
             if (mongoUser == null || !mongoUser.DocumentsUploaded)
                 return RedirectToAction("UploadDocuments");
             if (!mongoUser.Verified)
@@ -81,10 +88,10 @@ public class AccountController : Controller
         var sessionUserId = HttpContext.Session.GetInt32("UserId");
         if (sessionUserId == null) return RedirectToAction("Login");
 
-        var sqlUser = await _repo.GetByIdAsync(sessionUserId.Value);
+        var sqlUser = await _userService.GetUserById(sessionUserId.Value,true);
         if (sqlUser == null) return NotFound();
 
-        var mongoUser = await _repo.GetMongoUserAsync(sessionUserId.Value);
+        var mongoUser = await _userService.GetUserById(sessionUserId.Value);
 
         var model = new UserViewModel
         {
@@ -115,7 +122,7 @@ public class AccountController : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(UserViewModel model)
     {
-        await _repo.UpdateAsync(
+        await _userService.UpdateAsync(
             model.UserId, model.UserTypeId, model.Email, model.Active,
             model.Name, model.Address, model.NIC, model.Phone,
             model.DonatedLng, model.DonatedLat,
@@ -133,7 +140,7 @@ public class AccountController : Controller
         if (userId == null) return RedirectToAction("Login");
 
         // If already uploaded → go to pending
-        var mongoUser = await _repo.GetMongoUserAsync(userId.Value);
+        var mongoUser = await _userService.GetUserById(userId.Value);
         if (mongoUser?.DocumentsUploaded == true)
             return RedirectToAction("PendingVerification");
 
@@ -176,7 +183,7 @@ public class AccountController : Controller
             saved.Add($"/uploads/medical/{userId}/{fileName}");
         }
 
-        await _repo.SaveMedicalReportsAsync(userId.Value, saved);
+        await _medicalReportService.SaveMedicalReportsAsync(userId.Value, saved);
         return RedirectToAction("PendingVerification");
     }
 
@@ -187,7 +194,7 @@ public class AccountController : Controller
         if (userId == null) return RedirectToAction("Login");
 
         // If admin just verified the user, let them through
-        var mongoUser = await _repo.GetMongoUserAsync(userId.Value);
+        var mongoUser = await _userService.GetUserById(userId.Value);
         if (mongoUser?.Verified == true)
             return RedirectToAction("Index", "Dashboard");
 
@@ -223,8 +230,8 @@ public class AccountController : Controller
         await using var stream = new FileStream(fullPath, FileMode.Create);
         await file.CopyToAsync(stream);
 
-        await _repo.ReuploadMedicalReportAsync(
-            userId.Value, docIndex, $"/uploads/medical/{userId}/{fileName}");
+       await _medicalReportService.ReuploadMedicalReportAsync(
+           userId.Value, docIndex, $"/uploads/medical/{userId}/{fileName}");
 
         TempData["Success"] = "Document re-uploaded. Admin will review it shortly.";
         return RedirectToAction("PendingVerification");
@@ -251,14 +258,14 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var isValid = await _repo.VerifyPasswordAsync(userId.Value, model.CurrentPassword);
+        var isValid = await _userService.VerifyPasswordAsync(userId.Value, model.CurrentPassword);
         if (!isValid)
         {
             ViewBag.Error = "Current password is incorrect.";
             return View(model);
         }
 
-        await _repo.ChangePasswordAsync(userId.Value, model.NewPassword);
+        await _userService.ChangePasswordAsync(userId.Value, model.NewPassword);
         ViewBag.Success = "Password changed successfully.";
         return View();
     }

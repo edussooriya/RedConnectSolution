@@ -1,24 +1,20 @@
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 
 public class DonorMapService
 {
-    private readonly IMongoCollection<MongoUser> _collection;
-
-    public DonorMapService(IConfiguration config)
+    private readonly IUserService _userService;
+    public DonorMapService(IUserService  userService)
     {
-        var client = new MongoClient(config["Mongo:Connection"]);
-        var db = client.GetDatabase(config["Mongo:Database"]);
-        _collection = db.GetCollection<MongoUser>("Users");
+        _userService = userService;
     }
 
     public async Task<List<DonorMapViewModel>> GetActiveDonorsAsync(string bloodGroup = null)
     {
-        var users = await _collection
-            .Find(x => x.Active && x.AvailableLocation != null)
-            .ToListAsync();
+        var users = await _userService.GetAllUsersAsync(true);
 
         var query = users.Where(x => x.AvailableLocation?.Coordinates?.Length == 2);
 

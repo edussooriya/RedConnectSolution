@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RedConnect.DAL;
+using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 using RedConnectApp.DAL;
@@ -8,13 +9,16 @@ namespace RedConnect.Controllers
 {
     public class PortalController : Controller
     {
-        private readonly MongoRepository _repo;
-        private readonly MSSQLDBContext _context;
+        private readonly IUserService _userService;
+        private readonly IMedicalReportService  _medicalReportService;
+        private readonly IBloodBankService _bankService;
 
-        public PortalController(MongoRepository repo, MSSQLDBContext context)
+        public PortalController(IUserService userService,  
+            IMedicalReportService  medicalReportService, IBloodBankService bloodBankService)
         {
-            _repo = repo;
-            _context = context;
+            _userService = userService;
+            _medicalReportService = medicalReportService;
+            _bankService = bloodBankService;
         }
 
         // --- Donor List (all donors) ---
@@ -22,7 +26,7 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            var donors = await _repo.GetAllDonorsAsync();
+            var donors = await _userService.GetAllDonorsAsync();
 
             var donorList = donors.Select(x => new DonorListViewModel
             {
@@ -46,7 +50,7 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            await _repo.VerifyDonorAsync(userId);
+            await _userService.VerifyDonorAsync(userId);
             return RedirectToAction("DonorList");
         }
 
@@ -55,7 +59,7 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            var mongoUser = await _repo.GetMongoUserAsync(userId);
+            var mongoUser = await _userService.GetUserById(userId);
             if (mongoUser == null) return NotFound();
 
             ViewBag.DonorName = mongoUser.UserDetails?.Name ?? $"Donor #{userId}";
@@ -70,7 +74,7 @@ namespace RedConnect.Controllers
         public async Task<IActionResult> ApproveDocument(int userId, int docIndex)
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
-            await _repo.UpdateMedicalReportStatusAsync(userId, docIndex, "Approved");
+            await _medicalReportService.UpdateMedicalReportStatusAsync(userId, docIndex, "Approved");
             TempData["Success"] = "Document approved.";
             return RedirectToAction("ViewDocuments", new { userId });
         }
@@ -80,7 +84,7 @@ namespace RedConnect.Controllers
         public async Task<IActionResult> RejectDocument(int userId, int docIndex, string reason)
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
-            await _repo.UpdateMedicalReportStatusAsync(userId, docIndex, "Rejected",
+            await _medicalReportService.UpdateMedicalReportStatusAsync(userId, docIndex, "Rejected",
                 string.IsNullOrWhiteSpace(reason) ? "Does not meet requirements." : reason);
             TempData["Success"] = "Document rejected.";
             return RedirectToAction("ViewDocuments", new { userId });
@@ -92,7 +96,7 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            await _repo.DeactivateUserAsync(userId);
+            await _userService.DeactivateUserAsync(userId);
             return RedirectToAction("DonorList");
         }
 
@@ -101,7 +105,7 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            var banks = await _repo.GetAllBloodBanksAsync();
+            var banks = await _userService.GetAllBloodBanksAsync();
 
             var vm = banks.Select(b => new BloodBankListViewModel
             {
@@ -115,13 +119,14 @@ namespace RedConnect.Controllers
         }
 
         // --- Register Blood Bank (GET) ---
-        public IActionResult RegisterBank()
+        public async Task<IActionResult> RegisterBank()
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
+            var UserTypeList = await _userService.GetAllUserTypesAsync();
             var vm = new BloodBankViewModel
             {
-                UserTypes = _context.UserType.ToList()
+                UserTypes = UserTypeList
             };
             return View(vm);
         }
@@ -132,14 +137,14 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            if (await _repo.EmailExistsAsync(model.StaffEmail))
+            if (await _userService.EmailExistsAsync(model.StaffEmail))
             {
                 ModelState.AddModelError("StaffEmail", "Email already exists.");
-                model.UserTypes = _context.UserType.ToList();
+                model.UserTypes = await _userService.GetAllUserTypesAsync();
                 return View(model);
             }
 
-            await _repo.CreateOrUpdateBloodBankAsync(
+            await _bankService.CreateOrUpdateBloodBankAsync(
                 model.LocationName,
                 model.Address,
                 model.StaffEmail,

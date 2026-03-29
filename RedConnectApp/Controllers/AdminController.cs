@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using RedConnect.DAL;
+using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnect.ViewModels;
 using RedConnectApp.DAL;
@@ -12,17 +13,15 @@ namespace RedConnect.Controllers;
 
 public class AdminController : Controller
 {
-    private readonly MongoRepository _repo;
-    private readonly MSSQLDBContext  _context;
+    
     private readonly DonorMapService _mapService;
+    private readonly IUserService _userService;
 
 
-    public AdminController(MongoRepository repo, MSSQLDBContext context, DonorMapService mapService)
+    public AdminController(DonorMapService mapService,IUserService userService)
     {
-        _repo    = repo;
-        _context = context;
         _mapService = mapService;
-
+        _userService = userService;
     }
 
     private bool IsAdmin() =>
@@ -33,17 +32,21 @@ public class AdminController : Controller
     {
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-        var sqlUsers  = await _context.Users.ToListAsync();
-        var userTypes = await _context.UserType
-            .ToDictionaryAsync(t => t.UserTypeId, t => t.UserTypeName);
+        var sqlUsers = await _userService.GetAllUsersAsync();
+        var userTypes = await _userService.GetAllUserTypesAsync();
 
-        var mongoUsers = await _repo.GetAllMongoUsersAsync();
+        var mongoUsers = await _userService.GetAllUsersAsync(true);
         var mongoMap   = mongoUsers.ToDictionary(m => m.UserId, m => m);
+
+        var userTypeDict = userTypes.ToDictionary(
+            x => x.UserTypeId,
+            x => x.UserTypeName
+        );
 
         var list = sqlUsers.Select(u =>
         {
             mongoMap.TryGetValue(u.UserId, out var mongo);
-            userTypes.TryGetValue(u.UserTypeId, out var typeName);
+            userTypeDict.TryGetValue(u.UserTypeId, out var typeName);
 
             return new AdminUserListViewModel
             {
@@ -78,13 +81,13 @@ public class AdminController : Controller
     }
 
     // GET /Admin/CreateUser
-    public IActionResult CreateUser()
+    public async Task<IActionResult> CreateUser()
     {
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
         return View(new AdminCreateUserViewModel
         {
-            UserTypes = _context.UserType.ToList()
+            UserTypes = await _userService.GetAllUserTypesAsync()
         });
     }
 
@@ -94,14 +97,14 @@ public class AdminController : Controller
     {
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-        if (await _repo.EmailExistsAsync(model.Email))
+        if (await _userService.EmailExistsAsync(model.Email))
         {
             ViewBag.Error = "This email address is already registered.";
-            model.UserTypes = _context.UserType.ToList();
+            model.UserTypes = await _userService.GetAllUserTypesAsync();
             return View(model);
         }
 
-        await _repo.AdminCreateUserAsync(
+        await _userService.AdminCreateUserAsync(
             model.SelectedUserTypeId,
             model.Email,
             model.Password,
@@ -124,10 +127,10 @@ public class AdminController : Controller
     {
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-        var sqlUser = await _context.Users.FindAsync(id);
+        var sqlUser = await _userService.GetUserById(id,true);
         if (sqlUser == null) return NotFound();
 
-        var mongo = await _repo.GetMongoUserAsync(id);
+        var mongo = await _userService.GetUserById(id);
 
         var vm = new UserViewModel
         {
@@ -148,7 +151,7 @@ public class AdminController : Controller
             BloodGroup   = mongo?.BloodGroup ?? ""
         };
 
-        ViewBag.UserTypes = _context.UserType.ToList();
+        ViewBag.UserTypes = _userService.GetAllUserTypesAsync();
         return View(vm);
     }
 
@@ -158,7 +161,7 @@ public class AdminController : Controller
     {
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-        await _repo.UpdateAsync(
+        await _userService.UpdateAsync(
             model.UserId, model.UserTypeId, model.Email, model.Active,
             model.Name, model.Address, model.NIC, model.Phone,
             model.DonatedLng, model.DonatedLat,
@@ -176,9 +179,9 @@ public class AdminController : Controller
         if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
         if (currentActive)
-            await _repo.DeactivateUserAsync(userId);
+            await _userService.DeactivateUserAsync(userId);
         else
-            await _repo.ReactivateUserAsync(userId);
+            await _userService.ReactivateUserAsync(userId);
 
         return RedirectToAction("UserList");
     }
@@ -192,7 +195,7 @@ public class AdminController : Controller
     [HttpPost]
     public async Task<IActionResult> SearchUser(DonateViewModel model)
     {
-        var user = await _repo.GetMongoUserAsync(model.UserId);
+        var user = await _userService.GetUserById(model.UserId);
        
         if (user == null)
         {
@@ -216,7 +219,7 @@ public class AdminController : Controller
     [HttpPost]
     public async Task<IActionResult> Donate(DonateViewModel model)
     {
-        var user = await _repo.GetMongoUserAsync(model.UserId);
+        var user = await _userService.GetUserById(model.UserId);
 
         if (user == null)
             return NotFound();
@@ -248,7 +251,7 @@ public class AdminController : Controller
         };
 
 
-        await _repo.Donate(model.UserId,donation);
+        await _userService.Donate(model.UserId,donation);
         TempData["Success"] = "Donation recorded successfully";
 
         return RedirectToAction("Donate");

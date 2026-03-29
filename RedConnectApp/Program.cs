@@ -1,5 +1,9 @@
+using System;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using RedConnect.DAL;
+using RedConnect.Interfaces;
+using RedConnect.Services;
 using RedConnectApp.DAL;
 using RedConnectApp.Services;
 
@@ -19,20 +23,27 @@ builder.Services.AddSession(options =>
 builder.Services.AddDbContext<MSSQLDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MsSql")));
 
-builder.Services.AddScoped<MongoRepository>();
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new MongoClient(config["Mongo:Connection"]);
+});
+
+builder.Services.AddScoped<IMongoRepository, MongoRepository>();
+
+builder.Services.AddScoped<IAppDbContext, MSSQLDBContext>();
 builder.Services.AddScoped<DonorMapService>();
-builder.Services.AddScoped<DataSeeder>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<PasswordResetService>();
+builder.Services.AddScoped<IMedicalReportService,MedicalReportService>();
+builder.Services.AddScoped<IBloodBankService, BloodBankService>();
 
 var app = builder.Build();
 
 // ── Run seeder on startup ─────────────────────────────────────────────────
-using (var scope = app.Services.CreateScope())
-{
-    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
-    await seeder.SeedAsync();
-}
+
 
 app.UseStaticFiles();
 app.UseRouting();

@@ -31,7 +31,7 @@
                 <div class="rc-nav-section">General</div>
 
 
-                @if (userTypeId != null && userTypeId != 0)
+                @if (userTypeId != null)
                 {
                     <a href="/Dashboard" class="rc-nav-link @navClass("Dashboard", "Index")">
                         <i class="fas fa-gauge-high"></i> Dashboard
@@ -47,7 +47,7 @@
                 </a>
 
 
-                @if (userTypeId != null && userTypeId != 0)
+                @if (userTypeId != null)
                 {
                     <a href="/Account/ChangePassword" class="rc-nav-link @navClass("Account", "ChangePassword")">
                         <i class="fas fa-lock"></i> Change Password
@@ -74,13 +74,13 @@
                     </a>
 
                     <a href="/Admin/Donate" class="rc-nav-link @navClass("Admin", "Donate")">
-                        <i class="fas fa-plus-circle"></i> Search Donor
+                        <i class="fas fa-plus-circle"></i> Donate
                     </a>
 
                 }
             </div>
 
-            @if (userTypeId != null && userTypeId != 0)
+            @if (userTypeId != null)
             {
                 <div class="rc-sidebar__footer">
                     <a href="/Account/Logout" class="rc-btn rc-btn--logout w-100 justify-content-center">

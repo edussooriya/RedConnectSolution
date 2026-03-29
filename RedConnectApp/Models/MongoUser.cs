@@ -31,26 +31,7 @@ public class MongoUser
     public List<DonateHistory> Donate_History { get; set; } = new();
 }
 
-public class MedicalReport
-{
-    public int    Index          { get; set; }
-    public string Label          { get; set; }
-    public string FilePath       { get; set; }
-    public string Status         { get; set; } = "Pending"; // Pending | Approved | Rejected
-    public string RejectedReason { get; set; }
-}
 
-public class UserDetails
-{
-    public string Name { get; set; }
-    public string Address { get; set; }
-    public string NIC { get; set; }
-    public string Phone { get; set; }
-    public GenderEnum Gender { get; set; }
-}
 
-public class GeoLocation
-{
-    public string Type { get; set; } = "Point";
-    public double[] Coordinates { get; set; }
-}
+
+
