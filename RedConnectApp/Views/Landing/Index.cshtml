@@ -1,0 +1,233 @@
+﻿@{
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Connect | Blood Donation System</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #ffffff;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            background: rgba(255, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+            .navbar-brand i {
+                color: #ff4d4d;
+            }
+
+        .nav-link {
+            color: #fff !important;
+        }
+
+        /* HERO */
+        .hero {
+            background: linear-gradient(rgba(139,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1588776814546-ec7e2b97b6b3');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            text-align: center;
+        }
+
+            .hero h1 {
+                font-size: 3.5rem;
+                font-weight: bold;
+            }
+
+            .hero p {
+                max-width: 700px;
+                margin: auto;
+            }
+
+        /* BUTTONS */
+        .btn-main {
+            padding: 12px 30px;
+            border-radius: 30px;
+            margin: 10px;
+            transition: 0.3s;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff1a1a, #cc0000);
+            border: none;
+        }
+
+            .btn-danger:hover {
+                background: linear-gradient(45deg, #cc0000, #990000);
+                transform: translateY(-2px);
+            }
+
+        .btn-outline-light:hover {
+            transform: translateY(-2px);
+        }
+
+        /* ABOUT */
+        .about {
+            padding: 80px 20px;
+        }
+
+            .about h2 {
+                color: #cc0000;
+                font-weight: bold;
+            }
+
+        /* FEATURES */
+        .features {
+            background: #fff5f5;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .feature-box {
+            padding: 30px;
+            border-radius: 15px;
+            transition: 0.3s;
+        }
+
+            .feature-box:hover {
+                background: white;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+                transform: translateY(-5px);
+            }
+
+            .feature-box i {
+                color: #e60000;
+            }
+
+        /* MAP */
+        .map-section {
+            padding: 80px 20px;
+        }
+
+        /* CTA */
+        .bg-danger {
+            background: linear-gradient(45deg, #e60000, #990000) !important;
+        }
+
+        /* FOOTER */
+        .footer {
+            background: #111;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="fas fa-heart-pulse"></i> Red Connect</a>
+            <div class="ms-auto">
+                <a href="/Account/Login" class="btn btn-outline-light btn-sm">Login</a>
+                <a href="/Account/Register" class="btn btn-danger btn-sm">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="container">
+            <h1>Save Lives with Smart Blood Donation</h1>
+            <p class="lead">
+                Connecting donors, hospitals, and blood banks in real-time
+                to ensure faster emergency response and life-saving support.
+            </p>
+
+            <a href="/Account/Register" class="btn btn-danger btn-main">Get Started</a>
+            <a href="/Account/Login" class="btn btn-outline-light btn-main">Login</a>
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about text-center">
+        <div class="container">
+            <h2>About Red Connect</h2>
+            <p>
+                Red Connect is a smart blood donation platform designed to solve
+                critical blood shortages by enabling real-time donor tracking,
+                emergency alerts, and seamless coordination between medical institutions.
+            </p>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features">
+        <div class="container">
+            <h2 class="text-danger">System Features</h2>
+            <div class="row mt-4">
+
+                <div class="col-md-4 feature-box">
+                    <i class="fas fa-map-marker-alt fa-3x"></i>
+                    <h5 class="mt-3">Location-Based Matching</h5>
+                    <p>Find nearest donors and blood banks instantly.</p>
+                </div>
+
+                <div class="col-md-4 feature-box">
+                    <i class="fas fa-bell fa-3x"></i>
+                    <h5 class="mt-3">Emergency Alerts</h5>
+                    <p>Real-time notifications for urgent blood needs.</p>
+                </div>
+
+                <div class="col-md-4 feature-box">
+                    <i class="fas fa-database fa-3x"></i>
+                    <h5 class="mt-3">Centralized System</h5>
+                    <p>Secure and scalable donor data management.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- MAP -->
+    <section class="map-section text-center">
+        <div class="container">
+            <h2>Blood Bank Locations</h2>
+            <p>Explore nearby donation centers in real-time</p>
+
+            <iframe src="https://maps.google.com/maps?q=colombo%20national%20blood%20bank&t=&z=12&ie=UTF8&iwloc=&output=embed"
+                    width="100%"
+                    height="400"
+                    style="border-radius:10px; border:0;">
+            </iframe>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="text-center p-5 bg-danger text-white">
+        <h2 class="fw-bold">Save Lives Together</h2>
+        <p class="lead">Join our community of heroes who donate blood and save lives every day</p>
+        <a href="/Account/Register" class="btn btn-light">Create Account</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>© 2026 Red Connect | MSc IT Project</p>
+    </footer>
+
+</body>
+</html>

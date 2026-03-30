@@ -20,7 +20,7 @@ public class DashboardController : Controller
     public async Task<IActionResult> Index()
     {
         var userId = HttpContext.Session.GetInt32("UserId");
-        if (userId == null) return RedirectToAction("Login", "Account");
+        if (userId == null) return RedirectToAction("Index", "Landing");
 
         var mongoUser = await _userService.GetUserById(userId.Value);
 

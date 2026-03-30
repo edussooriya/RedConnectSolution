@@ -8,13 +8,19 @@
     <h1><i class="fas fa-list-check" style="color:var(--rc-red);"></i> Donor Management</h1>
     <p>Review and verify registered blood donors</p>
 </div>
-
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger" style="margin-bottom:15px;">
+        @TempData["Error"]
+    </div>
+}
 <div class="rc-card">
     <div class="rc-card__header">
         <h3><i class="fas fa-users" style="color:var(--rc-red);"></i> Registered Donors</h3>
         <span class="rc-badge rc-badge--blood">@Model.Count Total</span>
     </div>
     <div class="rc-table-wrap">
+        
         <table class="rc-table">
             <thead>
                 <tr>
@@ -92,6 +98,7 @@
                                 @if (!donor.Verified)
                                 {
                                     <form asp-action="Verify" asp-controller="Portal" method="post" style="display:inline;">
+                                        
                                         <input type="hidden" name="userId" value="@donor.UserId" />
                                         <button type="submit" class="rc-btn rc-btn--success rc-btn--sm">
                                             <i class="fas fa-check"></i> Verify

@@ -27,10 +27,22 @@
 </div>
 
 <form method="post" onsubmit="return rcValidateRegister()">
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            Please fix the errors and try again.
+        </div>
+    }
     <div class="row g-3">
         <div class="col-md-6">
             <label class="rc-form-label"><i class="fas fa-user"></i> Full Name</label>
             <input type="text" class="rc-input" name="name" placeholder="Your full name" required>
+            @if (ViewData.ModelState["name"]?.Errors.Count > 0)
+            {
+                <span class="text-danger">
+                    @ViewData.ModelState["name"].Errors[0].ErrorMessage
+                </span>
+            }
         </div>
         <div class="col-md-6">
             <label class="rc-form-label"><i class="fas fa-id-card"></i> NIC</label>
@@ -39,12 +51,24 @@
                    oninput="rcValidateNIC(this.value)"
                    onblur="rcValidateNIC(this.value)"
                    maxlength="12" required autocomplete="off">
+            @if (ViewData.ModelState["nic"]?.Errors.Count > 0)
+            {
+                <span class="text-danger">
+                    @ViewData.ModelState["nic"].Errors[0].ErrorMessage
+                </span>
+            }
             <div id="nicMsg" style="font-size:0.8rem; margin-top:0.35rem; min-height:1rem;"></div>
         </div>
 
         <div class="col-12">
             <label class="rc-form-label"><i class="fas fa-envelope"></i> Email Address</label>
             <input type="email" class="rc-input" name="email" placeholder="Enter your email" required>
+            @if (ViewData.ModelState["email"]?.Errors.Count > 0)
+            {
+                <span class="text-danger">
+                    @ViewData.ModelState["email"].Errors[0].ErrorMessage
+                </span>
+            }
         </div>
 
         <div class="col-md-4">
@@ -110,7 +134,12 @@
             </div>
             <div id="matchMsg" style="font-size:0.8rem; margin-top:0.3rem;"></div>
         </div>
-
+        @if (ViewData.ModelState["password"]?.Errors.Count > 0)
+        {
+            <span class="text-danger">
+                @ViewData.ModelState["password"].Errors[0].ErrorMessage
+            </span>
+        }
         <div class="col-12">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="agreeTerms" required>

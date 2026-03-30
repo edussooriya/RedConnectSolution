@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using RedConnect.DAL;
 using RedConnect.Interfaces;
@@ -33,6 +35,38 @@ public class AccountController : Controller
         double availableLng, double availableLat, string locationText, string phone,
         GenderEnum gender, string bloodGroup, int userTypeId = 0)
     {
+        //REQUIRED VALIDATION
+        if (string.IsNullOrWhiteSpace(email))
+            ModelState.AddModelError("email", "Email is required");
+
+        if (!new EmailAddressAttribute().IsValid(email))
+            ModelState.AddModelError("email", "Invalid email format");
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+            ModelState.AddModelError("password", "Password must be at least 8 characters");
+
+        if (!Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$"))
+            ModelState.AddModelError("password", "Password must contain uppercase, lowercase, number, and special character");
+
+        if (string.IsNullOrWhiteSpace(name))
+            ModelState.AddModelError("name", "Name is required");
+
+        if (string.IsNullOrWhiteSpace(nic))
+            ModelState.AddModelError("nic", "NIC is required");
+
+
+        //
+         if (await _userService.EmailExistsAsync(email))
+            ModelState.AddModelError("email", "Email already exists");
+
+        // 
+        if (!ModelState.IsValid)
+        {
+            return View(); // IMPORTANT: return same view
+        }
+
+
+
         await _userService.RegisterAsync(userTypeId, email, password,
             name, address, nic,
             donatedLng, donatedLat,

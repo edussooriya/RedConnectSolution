@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using RedConnect.DAL;
 using RedConnect.Interfaces;
 using RedConnect.Models;
@@ -50,7 +51,16 @@ namespace RedConnect.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Login", "Account");
 
-            await _userService.VerifyDonorAsync(userId);
+            var mongoUser = await _userService.GetUserById(userId);
+            if (mongoUser.MedicalReports.Count < 3 || mongoUser.MedicalReports == null)
+            {
+                TempData["Error"] = "At least 3 medical reports are required before verification.";
+            }
+            else 
+            {
+                await _userService.VerifyDonorAsync(userId);
+            }
+          
             return RedirectToAction("DonorList");
         }
 
