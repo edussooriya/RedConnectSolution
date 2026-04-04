@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using RedConnect.DAL;
+using RedConnect.Exceptions;
 using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnectApp.Enums;
@@ -37,8 +38,26 @@ public class UserService : IUserService
             Active = true
         };
 
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (existingUser != null)
+        {
+            throw new BusinessException("Email already registered");
+        }
+
         _context.Users.Add(sqlUser);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while saving user");
+        }
+
+        
 
         var mongoUser = new MongoUser
         {
@@ -66,7 +85,17 @@ public class UserService : IUserService
             LocationText = locationSearch,
             BloodGroup = bloodGroup
         };
-        await _mongoRepo.CreateUserAsync(mongoUser);
+
+        try
+        {
+            await _mongoRepo.CreateUserAsync(mongoUser);
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while saving user");
+        }
+        
 
     }
 
@@ -86,8 +115,27 @@ public class UserService : IUserService
             Password = hashed,
             Active = true
         };
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (existingUser != null)
+        {
+            throw new BusinessException("Email already registered");
+        }
+
+
         _context.Users.Add(sqlUser);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while saving Admin user");
+        }
+       
 
         var mongoUser = new MongoUser
         {
@@ -109,7 +157,16 @@ public class UserService : IUserService
             LocationText = locationText ?? string.Empty,
             BloodGroup = bloodGroup ?? string.Empty
         };
-        await _mongoRepo.CreateUserAsync(mongoUser);
+        try
+        {
+            await _mongoRepo.CreateUserAsync(mongoUser);
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while saving Admin user");
+        }
+        
     }
 
     public async Task UpdateAsync(int userId, int userTypeId, string email, bool active, string name, string address,
@@ -126,7 +183,16 @@ public class UserService : IUserService
         sqlUser.Active = active;
         sqlUser.LastUpdatedOn = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while Updating User details");
+        }
+       
 
 
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
@@ -148,18 +214,35 @@ public class UserService : IUserService
             .Set(x => x.DonatedLocation, new GeoLocation { Coordinates = new[] { donatedLng, donatedLat } })
             .Set(x => x.AvailableLocation, new GeoLocation { Coordinates = new[] { availableLng, availableLat } })
             .SetOnInsert(x => x.CreatedOn, DateTime.UtcNow);
+        try
+        {
+            await _mongoRepo.UpdateAsync(update, filter);
+        }
+        catch (Exception)
+        {
 
-        await _mongoRepo.UpdateAsync(update, filter);
+            throw new BusinessException("Error while Updating User details");
+        }
+        
     }
 
     public async Task<MsSqlUser?> LoginAsync(string email, string password)
     {
-        var user = _context.Users.FirstOrDefault(x => x.Email == email && x.Active);
+        try
+        {
+            
+            var user = _context.Users.FirstOrDefault(x => x.Email == email && x.Active);
+            if (user == null)
+                return null;
 
-        if (user == null)
-            return null;
+            return BCrypt.Net.BCrypt.Verify(password, user.Password) ? user : null;
+        }
+        catch (Exception)
+        {
 
-        return BCrypt.Net.BCrypt.Verify(password, user.Password) ? user : null;
+            throw new BusinessException("Error while Trying to login to the application");
+        }
+       
     }
 
     public async Task<List<UserType>> GetUserTypes()
@@ -196,8 +279,16 @@ public class UserService : IUserService
         var update = Builders<MongoUser>.Update
             .Set(x => x.Verified, true)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
+        try
+        {
+            await _mongoRepo.UpdateAsync(update, filter);
+        }
+        catch (Exception)
+        {
 
-        await _mongoRepo.UpdateAsync(update, filter);
+            throw new BusinessException("Error while Verifying Donor details");
+        }
+        
     }
 
     public async Task<List<MongoUser>> GetAllDonorsAsync()
@@ -239,7 +330,16 @@ public class UserService : IUserService
         if (user == null) return;
         user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.LastUpdatedOn = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while Updating User Password");
+        }
+        
     }
 
     public async Task DeactivateUserAsync(int userId)
@@ -249,14 +349,32 @@ public class UserService : IUserService
         {
             sqlUser.Active = false;
             sqlUser.LastUpdatedOn = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw new BusinessException("Error while Deactivating user");
+            }
+           
         }
 
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
         var update = Builders<MongoUser>.Update
             .Set(x => x.Active, false)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
-        await _mongoRepo.UpdateAsync( update, filter);
+        try
+        {
+            await _mongoRepo.UpdateAsync(update, filter);
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while Deactivating user");
+        }
+        
     }
 
     public async Task ReactivateUserAsync(int userId)
@@ -266,14 +384,32 @@ public class UserService : IUserService
         {
             sqlUser.Active = true;
             sqlUser.LastUpdatedOn = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw new BusinessException("Error while Activating user");
+            }
+            
         }
 
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
         var update = Builders<MongoUser>.Update
             .Set(x => x.Active, true)
             .Set(x => x.LastUpdatedOn, DateTime.UtcNow);
-        await _mongoRepo.UpdateAsync(update, filter);
+        try
+        {
+            await _mongoRepo.UpdateAsync(update, filter);
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while Activating user");
+        }
+       
     }
 
     public async Task<List<BloodBankDetails>> GetAllBloodBanksAsync()
@@ -296,7 +432,16 @@ public class UserService : IUserService
     {
         var update = Builders<MongoUser>.Update.Push(x => x.Donate_History, donation);
         var filter = Builders<MongoUser>.Filter.Eq(x => x.UserId, userId);
-        await _mongoRepo.UpdateAsync(update, filter);
+        try
+        {
+            await _mongoRepo.UpdateAsync(update, filter);
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Error while Updating Blood donation details");
+        }
+        
     }
 
 }

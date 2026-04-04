@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using RedConnect.Exceptions;
 using RedConnect.Interfaces;
 using RedConnect.Models;
 
@@ -26,12 +27,23 @@ namespace RedConnect.Services
             );
 
             int id = 1;
-            var _userCollection = await _mongoRepo.GetUserCount(f=>f.Active == true);
-            var totalDonors = await _mongoRepo.GetUserCount(f => f.Active == true && f.UserType == 0);
-            var verifiedDonors = await _mongoRepo.GetUserCount(f => f.Verified == true);
-            var totalBanks = await _mongoRepo.GetBloodBankCount();
+            
 
-            return (totalDonors, verifiedDonors, totalBanks);
+            try
+            {
+                var _userCollection = await _mongoRepo.GetUserCount(f => f.Active == true);
+                var totalDonors = await _mongoRepo.GetUserCount(f => f.Active == true && f.UserType == 0);
+                var verifiedDonors = await _mongoRepo.GetUserCount(f => f.Verified == true);
+                var totalBanks = await _mongoRepo.GetBloodBankCount();
+
+                return (totalDonors, verifiedDonors, totalBanks);
+            }
+            catch (Exception)
+            {
+                throw new BusinessException("Error while Trying to login to the application");
+
+            }
+            
         }
     }
 }

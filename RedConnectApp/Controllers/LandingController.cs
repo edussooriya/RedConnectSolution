@@ -2,7 +2,7 @@
 
 namespace RedConnect.Controllers
 {
-    public class LandingController : Controller
+    public class LandingController : BaseController
     {
         public IActionResult Index()
         {

@@ -4,7 +4,7 @@ using RedConnect.Interfaces;
 
 namespace RedConnect.Controllers
 {
-    public class MapController : Controller
+    public class MapController : BaseController
     {
         private readonly DonorMapService _mapService;
         private readonly IMongoRepository _mongoRepo;

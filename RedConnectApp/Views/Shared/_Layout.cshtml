@@ -105,6 +105,13 @@
                         }
                     </span>
                 </div>
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        @TempData["Error"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
             </header>
 
             <main class="rc-content">
@@ -114,6 +121,8 @@
                         <i class="fas fa-check-circle"></i> @TempData["Success"]
                     </div>
                 }
+
+                
                 @RenderBody()
             </main>
         </div>

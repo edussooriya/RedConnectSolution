@@ -6,7 +6,7 @@ using RedConnect.ViewModels;
 
 namespace RedConnect.Controllers;
 
-public class DashboardController : Controller
+public class DashboardController : BaseController
 {
     private readonly IUserService _userService;
     private readonly DashboardService _dashboardService;

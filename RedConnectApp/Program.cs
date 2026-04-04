@@ -3,14 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using RedConnect.DAL;
 using RedConnect.Interfaces;
+using RedConnect.Middleware;
 using RedConnect.Services;
 using RedConnectApp.DAL;
 using RedConnectApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
-
+builder.Services.AddControllersWithViews()
+    .AddSessionStateTempDataProvider();
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession(options =>
@@ -46,8 +47,10 @@ var app = builder.Build();
 
 
 app.UseStaticFiles();
+
 app.UseRouting();
 app.UseSession();
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllerRoute(

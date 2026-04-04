@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+using RedConnect.Exceptions;
 using RedConnect.Interfaces;
 using RedConnect.Models;
 
@@ -24,7 +25,7 @@ namespace RedConnect.Services
         int userTypeId,
         double lat = 0, double lng = 0, string locationText = "")
         {
-            // 🔹 1️⃣ Check if email exists in SQL
+            //Check if email exists in SQL
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(x => x.Email == email);
 
@@ -44,14 +45,23 @@ namespace RedConnect.Services
                 };
 
                 _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception)
+                {
+
+                    throw new BusinessException("Error while Trying to Create a blood bank User");
+                }
+               
             }
             else
             {
                 user = existingUser;
             }
 
-            // 🔹 2️⃣ Check if BloodBank location exists
+            // Check if BloodBank location exists
             var existingBank = await GetBloodBankByLocationAsync(locationName);
 
             if (existingBank == null)
@@ -67,12 +77,20 @@ namespace RedConnect.Services
                     UserIds = new List<int> { user.UserId },
                     CreatedOn = DateTime.UtcNow
                 };
+                try
+                {
+                    await _mongoRepo.CreateBloodBankAsync(bloodBank);
+                }
+                catch (Exception)
+                {
 
-                await _mongoRepo.CreateBloodBankAsync(bloodBank);
+                    throw new BusinessException("Error while Trying to Create a blood bank");
+                }
+                
             }
             else
             {
-                // 🔹 Add userId only if not already inside array
+                //Add userId only if not already inside array
                 if (!existingBank.UserIds.Contains(user.UserId))
                 {
                     var filter = Builders<BloodBankDetails>.Filter
@@ -80,8 +98,16 @@ namespace RedConnect.Services
 
                     var update = Builders<BloodBankDetails>.Update
                         .AddToSet(x => x.UserIds, user.UserId);
+                    try
+                    {
+                        await _mongoRepo.UpdateAsync(update, filter);
+                    }
+                    catch (Exception)
+                    {
 
-                    await _mongoRepo.UpdateAsync(update, filter);
+                        throw new BusinessException("Error while Trying to Update blood bank details");
+                    }
+                    
                 }
             }
         }

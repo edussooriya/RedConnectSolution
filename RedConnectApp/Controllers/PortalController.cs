@@ -8,7 +8,7 @@ using RedConnectApp.DAL;
 
 namespace RedConnect.Controllers
 {
-    public class PortalController : Controller
+    public class PortalController : BaseController
     {
         private readonly IUserService _userService;
         private readonly IMedicalReportService  _medicalReportService;

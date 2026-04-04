@@ -11,7 +11,7 @@ using RedConnectApp.ViewModels;
 
 namespace RedConnect.Controllers;
 
-public class AdminController : Controller
+public class AdminController : BaseController
 {
     
     private readonly DonorMapService _mapService;
@@ -36,7 +36,8 @@ public class AdminController : Controller
         var userTypes = await _userService.GetAllUserTypesAsync();
 
         var mongoUsers = await _userService.GetAllUsersAsync(true);
-        var mongoMap   = mongoUsers.ToDictionary(m => m.UserId, m => m);
+        var mongoMap   = mongoUsers.GroupBy(m => m.UserId)
+                        .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.CreatedOn).First());
 
         var userTypeDict = userTypes.ToDictionary(
             x => x.UserTypeId,

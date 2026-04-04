@@ -10,7 +10,7 @@ using RedConnectApp.Services;
 
 namespace RedConnect.Controllers;
 
-public class AccountController : Controller
+public class AccountController : BaseController
 {
     private readonly PasswordResetService _passwordResetService;
     private readonly IUserService _userService;
