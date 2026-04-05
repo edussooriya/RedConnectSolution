@@ -4,6 +4,7 @@ using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using RedConnect.Exceptions;
 using RedConnect.Interfaces;
 using RedConnect.Models;
 using RedConnectApp.DAL;
@@ -21,11 +22,20 @@ public class MongoRepository : IMongoRepository
 
     public MongoRepository(MSSQLDBContext context, IConfiguration config)
     {
-        _context = context;
-        var client = new MongoClient(config["Mongo:Connection"]);
-        _db = client.GetDatabase(config["Mongo:Database"]);
-        _userCollection      = _db.GetCollection<MongoUser>("Users");
-        _bloodBankCollection  = _db.GetCollection<BloodBankDetails>("BloodBankDetails");
+        try
+        {
+            _context = context;
+            var client = new MongoClient(config["Mongo:Connection"]);
+            _db = client.GetDatabase(config["Mongo:Database"]);
+            _userCollection = _db.GetCollection<MongoUser>("Users");
+            _bloodBankCollection = _db.GetCollection<BloodBankDetails>("BloodBankDetails");
+        }
+        catch (Exception)
+        {
+
+            throw new BusinessException("Something went wrong while establishing Connection");
+        }
+        
     }
 
     /// <summary>

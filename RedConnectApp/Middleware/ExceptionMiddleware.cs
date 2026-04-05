@@ -17,7 +17,40 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
+        catch (BusinessException ex)
+        {
+            var referer = context.Request.Headers["Referer"].ToString();
+
+            string redirectUrl = "/"; // default fallback
+
+            if (!string.IsNullOrEmpty(referer))
+            {
+                try
+                {
+                    var uri = new Uri(referer);
+
+                    // Ensure it's from same host 
+                    if (uri.Host == context.Request.Host.Host)
+                    {
+                        redirectUrl = uri.PathAndQuery;
+                    }
+                }
+                catch
+                {
+                    // ignore invalid URL
+                }
+            }
+
+            // Add error parameter
+            var separator = redirectUrl.Contains("?") ? "&" : "?";
+
+
+            context.Response.Redirect($"/Landing?error={Uri.EscapeDataString(ex.Message)}");
+
+            return;
+        }
         catch (Exception ex)
+
         {
             var referer = context.Request.Headers["Referer"].ToString();
 
